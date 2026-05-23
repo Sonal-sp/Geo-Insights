@@ -1,6 +1,6 @@
-### Geo-Insights : An interactive globe wih the information of the specific area/city or state 
+# Geo-Insights : An interactive globe wih the information of the specific area/city or state 
 
-# CURRENTLY IN DEVELOPMENT PHASE 
+### CURRENTLY IN DEVELOPMENT PHASE 
 
 Phase 1: used react-global.gl for a spinning earth UI at the beginning.
 

@@ -109,10 +109,6 @@ function App() {
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '25px 0' }} />
-          
-          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1' }}>
-            Perfect. Once the global margins are reset via CSS, this panel will pull back smoothly into view, and the horizontal scrollbars will disappear completely.
-          </p>
         </div>
       )}
     </div>

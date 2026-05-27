@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Globe from 'react-globe.gl';
-import { fetchInsights, fetchCountryCoordinates, countryMatrixList } from './services/geoApi';
+import { fetchInsights, fetchCountryCoordinates, countryMatrixList, fetchLiveGlobalEvents } from './services/geoApi';
 
 function App() {
   const globeRef = useRef();
   const [selectedCoords, setSelectedCoords] = useState(null);
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('history'); // Active state tracker for tabs
+  const [activeTab, setActiveTab] = useState('history'); 
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
   // Search States
@@ -18,6 +18,10 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // PHASE 9: Live Crisis Data Tracking States
+  const [liveEvents, setLiveEvents] = useState([]);
+  const [activeCrisis, setActiveCrisis] = useState(null);
+
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
     window.addEventListener('resize', handleResize);
@@ -27,15 +31,22 @@ function App() {
       globeRef.current.controls().autoRotateSpeed = 0.5;
       globeRef.current.controls().enablePan = false; 
     }
+
+    // PHASE 9: Initialize live monitoring telemetry on startup
+    const initializeCrisisTracker = async () => {
+      const events = await fetchLiveGlobalEvents();
+      setLiveEvents(events);
+    };
+    initializeCrisisTracker();
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Shared processing hub for handling data hydration and camera focus shifts
   const processLocationExecution = async (lat, lng) => {
     setLoading(true);
     setInsights(null);
-    setActiveTab('history'); // Reset back to default tab
+    setActiveCrisis(null); // Clear active crisis context if searching/clicking standard land
+    setActiveTab('history'); 
 
     if (globeRef.current) {
       globeRef.current.controls().autoRotate = false;
@@ -50,6 +61,19 @@ function App() {
   const handleGlobeClick = async ({ lat, lng }) => {
     setSelectedCoords({ lat, lng });
     await processLocationExecution(lat, lng);
+  };
+
+  // PHASE 9: Handler for when a student clicks a live crisis node point
+  const handleCrisisPointClick = (eventPoint) => {
+    // Clear normal insights, shift focus entirely to the active crisis profile
+    setInsights(null);
+    setSelectedCoords({ lat: eventPoint.lat, lng: eventPoint.lng });
+    setActiveCrisis(eventPoint);
+
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = false;
+      globeRef.current.pointOfView({ lat: eventPoint.lat, lng: eventPoint.lng, altitude: 1.8 }, 2000);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -105,12 +129,11 @@ function App() {
     }
   };
 
-  // PHASE 8: Dynamic Color Matrix Dictionary for Academic Layer Map
   const getLayerColor = () => {
     switch (activeTab) {
-      case 'history': return '#eab308'; // Premium Academic Amber
-      case 'culture': return '#10b981'; // Socio-Cultural Emerald
-      case 'current': return '#06b6d4'; // Live Affairs Cyan
+      case 'history': return '#eab308'; 
+      case 'culture': return '#10b981'; 
+      case 'current': return '#06b6d4'; 
       default: return '#38bdf8';
     }
   };
@@ -221,53 +244,65 @@ function App() {
           atmosphereColor="#0ea5e9"
           atmosphereAltitude={0.18}
           
-          // PHASE 8: Dynamically recalculating target ring attributes via state dictionary shifts
+          // Render standard search tracking rings
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
-          ringColor={() => getLayerColor()}
+          ringColor={() => activeCrisis ? '#ef4444' : getLayerColor()}
           ringMaxRadius={selectedCoords ? 7 : 0}
           ringPropagationSpeed={4}
           ringRepeatPeriod={500}
+
+          // PHASE 9: Mapping live crisis points onto the globe 3D surface
+          pointsData={liveEvents}
+          pointLat="lat"
+          pointLng="lng"
+          pointColor={() => '#f97316'} // Neon hazard orange 
+          pointAltitude={(d) => Math.min(d.magnitude * 0.05, 0.4)} // Height scales relative to seismic impact
+          pointRadius={0.25}
+          eventsData={liveEvents}
+          onPointClick={handleCrisisPointClick}
         />
       </div>
 
-      {/* PHASE 8: FLOATING ACADEMIC MATRIX CONTROL DOCK LAYER */}
-      <div style={{
-        position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
-        backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '30px', padding: '6px 12px',
-        display: 'flex', gap: '8px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', boxSizing: 'border-box'
-      }}>
-        {[
-          { id: 'history', label: 'History', color: '#eab308' },
-          { id: 'culture', label: 'Culture', color: '#10b981' },
-          { id: 'current', label: 'Current Affairs', color: '#06b6d4' }
-        ].map((layer) => (
-          <button
-            key={layer.id}
-            onClick={() => setActiveTab(layer.id)}
-            style={{
-              padding: '10px 20px', borderRadius: '20px', border: 'none',
-              backgroundColor: activeTab === layer.id ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              color: activeTab === layer.id ? layer.color : '#64748b',
-              fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-              fontFamily: 'system-ui, sans-serif', letterSpacing: '0.5px',
-              transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '8px'
-            }}
-          >
-            <div style={{ 
-              width: '6px', height: '6px', borderRadius: '50%', 
-              backgroundColor: layer.color,
-              boxShadow: activeTab === layer.id ? `0 0 10px ${layer.color}` : 'none'
-            }} />
-            {layer.label}
-          </button>
-        ))}
-      </div>
+      {/* Academic Matrix Control Dock Layer */}
+      {!activeCrisis && (
+        <div style={{
+          position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
+          backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '30px', padding: '6px 12px',
+          display: 'flex', gap: '8px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', boxSizing: 'border-box'
+        }}>
+          {[
+            { id: 'history', label: 'History', color: '#eab308' },
+            { id: 'culture', label: 'Culture', color: '#10b981' },
+            { id: 'current', label: 'Current Affairs', color: '#06b6d4' }
+          ].map((layer) => (
+            <button
+              key={layer.id}
+              onClick={() => setActiveTab(layer.id)}
+              style={{
+                padding: '10px 20px', borderRadius: '20px', border: 'none',
+                backgroundColor: activeTab === layer.id ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                color: activeTab === layer.id ? layer.color : '#64748b',
+                fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                fontFamily: 'system-ui, sans-serif', letterSpacing: '0.5px',
+                transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '8px'
+              }}
+            >
+              <div style={{ 
+                width: '6px', height: '6px', borderRadius: '50%', 
+                backgroundColor: layer.color,
+                boxShadow: activeTab === layer.id ? `0 0 10px ${layer.color}` : 'none'
+              }} />
+              {layer.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Floating Dynamic Study Panel */}
-      {selectedCoords && (
+      {(selectedCoords || activeCrisis) && (
         <div style={{
           position: 'absolute', right: '30px', top: '30px', bottom: '30px', width: '400px',
           backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
@@ -279,12 +314,53 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
               <p style={{ color: '#38bdf8', fontSize: '13px', letterSpacing: '2px', fontWeight: '500' }}>ASSEMBLING GEO-MODULES...</p>
             </div>
+          ) : activeCrisis ? (
+            /* PHASE 9: SPECIAL TARGET CRISIS PROFILE VIEW OVERLAY */
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div>
+                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#ef4444', fontWeight: '700', letterSpacing: '2px' }}>
+                  {activeCrisis.type} Alert
+                </span>
+                <h2 style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: '400', letterSpacing: '-0.5px', color: '#f97316' }}>
+                  Magnitude {activeCrisis.magnitude}
+                </h2>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: '4px 0 0 0' }}>{activeCrisis.place}</p>
+              </div>
+
+              <div style={{ flex: 1, marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#ef4444', letterSpacing: '1px', textTransform: 'uppercase' }}>Socio-Environmental Impact</h4>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>
+                    Seismic activation detected on coordinates [{activeCrisis.lat.toFixed(2)}, {activeCrisis.lng.toFixed(2)}]. For civil services examinations, analyze the regional infrastructure resilience, disaster management act parameters, and structural tectonic plates involved.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>Timestamp Telemetry</h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1' }}>{activeCrisis.time}</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setActiveCrisis(null)}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer',
+                  transition: 'background-color 0.2s', marginTop: 'auto'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
+              >
+                Return to Core Map Matrix
+              </button>
+            </div>
           ) : insights?.isOcean ? (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1, textAlign: 'center' }}>
               <h3 style={{ color: '#38bdf8', margin: '0 0 10px 0' }}>International Waters</h3>
               <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>You targeted maritime or non-sovereign global territories. Focus your crosshairs back onto landmasses for core exam syllabi.</p>
             </div>
           ) : (
+            /* Standard Sovereign Insights Template View */
             <>
               <div>
                 <span style={{ textTransform: 'uppercase', fontSize: '10px', color: getLayerColor(), fontWeight: '700', letterSpacing: '2px', transition: 'color 0.3s' }}>
@@ -295,7 +371,6 @@ function App() {
                 </h2>
               </div>
 
-              {/* Minimal Menu Tabs */}
               <div style={{ display: 'flex', gap: '8px', marginTop: '25px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '12px' }}>
                 {['history', 'culture', 'current'].map((tab) => (
                   <button 
@@ -318,7 +393,6 @@ function App() {
                 ))}
               </div>
               
-              {/* Contextual Data Viewer Area */}
               <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', paddingRight: '4px' }}>
                 {activeTab === 'history' && (
                   <div>

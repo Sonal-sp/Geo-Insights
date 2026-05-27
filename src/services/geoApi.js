@@ -131,3 +131,28 @@ export const countryMatrixList = [
   "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Venezuela", 
   "Vietnam", "Yemen", "Zambia", "Zimbabwe"
 ];
+
+export async function fetchLiveGlobalEvents() {
+  try {
+    // Fetching significant earthquakes from the past 30 days globally
+    const response = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson");
+    if (!response.ok) throw new Error("Failed to pull live global event stream.");
+    
+    const data = await response.json();
+    
+    // Map out the GeoJSON into a clean array our Globe component can loop through natively
+    return data.features.map(feature => ({
+      id: feature.id,
+      lat: feature.geometry.coordinates[1],
+      lng: feature.geometry.coordinates[0],
+      magnitude: feature.properties.mag,
+      place: feature.properties.place,
+      time: new Date(feature.properties.time).toLocaleString(),
+      type: "Seismic Hazard",
+      url: feature.properties.url
+    }));
+  } catch (error) {
+    console.error("Crisis Feed Failure:", error);
+    return []; // Return empty array on failure to prevent app crashes
+  }
+}

@@ -20,6 +20,8 @@ Phase 7: Added a dropdown snackbar like component for history ,culture ,current 
 
 Phase 8:Added Real-time tracking of climate, seismic, and humanitarian alerts.
 
+Phase 9:Added interactive Map Coordinates Quiz.
+
 Upcoming phases with exciting features and will be developed as soon as possible 
 
 ## Open to any kind of feedback and guidance :). 

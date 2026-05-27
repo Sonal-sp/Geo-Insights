@@ -156,3 +156,26 @@ export async function fetchLiveGlobalEvents() {
     return []; // Return empty array on failure to prevent app crashes
   }
 }
+
+/**
+ * PHASE 10: Lightweight Quiz Coordinate Validator
+ * Returns ONLY the country name of a clicked point for fast verification.
+ */
+export async function verifyQuizClick(lat, lng) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+      {
+        headers: {
+          'Accept-Language': 'en',
+          'User-Agent': 'GeoInsightsStudyMatrixApplication/1.0 (contact: student-dev@example.com)'
+        }
+      }
+    );
+    const data = await response.json();
+    return data.address?.country || null;
+  } catch (error) {
+    console.error("Quiz Validation Network Error:", error);
+    return null;
+  }
+}

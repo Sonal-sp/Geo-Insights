@@ -14,18 +14,21 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   
-  // NEW: Suggestions Matrix State Layout
+  // Suggestions Matrix State Layout
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
     window.addEventListener('resize', handleResize);
+    
     if (globeRef.current) {
+      // Clean, standardized rotational controls configuration
       globeRef.current.controls().autoRotate = true;
       globeRef.current.controls().autoRotateSpeed = 0.5;
       globeRef.current.controls().enablePan = false; 
     }
+    
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -51,7 +54,7 @@ function App() {
     await processLocationExecution(lat, lng);
   };
 
-  // NEW: Real-time autofill matching query hook
+  // Real-time autofill matching query hook
   const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -59,7 +62,7 @@ function App() {
     if (value.trim().length > 1) {
       const filtered = countryMatrixList
         .filter(country => country.toLowerCase().startsWith(value.toLowerCase()))
-        .slice(0, 5); // Clean ceiling to display top 5 options only
+        .slice(0, 5); 
       setSuggestions(filtered);
       setShowSuggestions(true);
     } else {
@@ -68,7 +71,7 @@ function App() {
     }
   };
 
-  // NEW: Dropdown selection execution matrix
+  // Dropdown selection execution matrix
   const handleSelectSuggestion = async (country) => {
     setSearchQuery(country);
     setSuggestions([]);
@@ -79,7 +82,7 @@ function App() {
       const coords = await fetchCountryCoordinates(country);
       setSelectedCoords(coords);
       await processLocationExecution(coords.lat, coords.lng);
-      setSearchQuery(''); // Flush input query string
+      setSearchQuery(''); 
     } catch (err) {
       alert("Matrix location mismatch on selection route.");
     } finally {
@@ -94,9 +97,9 @@ function App() {
     setSearchLoading(true);
     try {
       const coords = await fetchCountryCoordinates(searchQuery);
-      setSelectedCoords(coords); // Instantly drop point marker coordinates
+      setSelectedCoords(coords); 
       await processLocationExecution(coords.lat, coords.lng);
-      setSearchQuery(''); // Clean input field upon successful fly-to execution
+      setSearchQuery(''); 
       setSuggestions([]);
       setShowSuggestions(false);
     } catch (err) {
@@ -107,7 +110,7 @@ function App() {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#020617' }}>
       
       {/* Floating Header */}
       <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 20, color: '#fff', fontFamily: 'system-ui, sans-serif', pointerEvents: 'none' }}>
@@ -115,7 +118,7 @@ function App() {
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
       </div>
 
-      {/* UPDATED: Search Matrix Input Layer Overlay with Autofill Dropdown */}
+      {/* Search Matrix Input Layer Overlay with Autofill Dropdown */}
       <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
         <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
@@ -123,7 +126,7 @@ function App() {
             value={searchQuery}
             onChange={handleInputChange}
             onFocus={() => searchQuery.trim().length > 1 && setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Buffer ensures pointer select fires down securely
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} 
             placeholder="Type country (e.g. Chile, Japan, Egypt)..."
             disabled={searchLoading}
             style={{
@@ -162,7 +165,7 @@ function App() {
           </button>
         </form>
 
-        {/* NEW: Glassmorphic Dropdown Panel overlay matrix */}
+        {/* Glassmorphic Dropdown Panel overlay matrix */}
         {showSuggestions && suggestions.length > 0 && (
           <div style={{
             position: 'absolute', top: '54px', left: '20px', right: '20px',
@@ -194,7 +197,6 @@ function App() {
           </div>
         )}
 
-        {/* Simple global CSS injection for spinner asset keyframe */}
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
@@ -204,19 +206,26 @@ function App() {
           ref={globeRef}
           width={dimensions.width}
           height={dimensions.height}
+          
+          // Pure, native high-performance assets mapping
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
           bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
           backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
           onGlobeClick={handleGlobeClick}
+          
+          // PHASE 7 FIX: Utilizing direct component props for robust, crash-free atmospheric glow shading
+          showAtmosphere={true}
+          atmosphereColor="#0ea5e9"
+          atmosphereAltitude={0.18}
           
           // Render tracking rings on targeted coordinates
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
           ringColor={() => '#38bdf8'}
-          ringMaxRadius={6}
-          ringPropagationSpeed={3}
-          ringRepeatPeriod={800}
+          ringMaxRadius={7}
+          ringPropagationSpeed={3.5}
+          ringRepeatPeriod={650}
         />
       </div>
 

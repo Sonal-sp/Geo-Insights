@@ -23,7 +23,6 @@ function App() {
     window.addEventListener('resize', handleResize);
     
     if (globeRef.current) {
-      // Clean, standardized rotational controls configuration
       globeRef.current.controls().autoRotate = true;
       globeRef.current.controls().autoRotateSpeed = 0.5;
       globeRef.current.controls().enablePan = false; 
@@ -38,7 +37,6 @@ function App() {
     setInsights(null);
     setActiveTab('history'); // Reset back to default tab
 
-    // Smoothly pan camera to coordinates over 2500ms at an altitude multiplier of 2.0
     if (globeRef.current) {
       globeRef.current.controls().autoRotate = false;
       globeRef.current.pointOfView({ lat, lng, altitude: 2.0 }, 2500);
@@ -54,7 +52,6 @@ function App() {
     await processLocationExecution(lat, lng);
   };
 
-  // Real-time autofill matching query hook
   const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -71,7 +68,6 @@ function App() {
     }
   };
 
-  // Dropdown selection execution matrix
   const handleSelectSuggestion = async (country) => {
     setSearchQuery(country);
     setSuggestions([]);
@@ -109,6 +105,16 @@ function App() {
     }
   };
 
+  // PHASE 8: Dynamic Color Matrix Dictionary for Academic Layer Map
+  const getLayerColor = () => {
+    switch (activeTab) {
+      case 'history': return '#eab308'; // Premium Academic Amber
+      case 'culture': return '#10b981'; // Socio-Cultural Emerald
+      case 'current': return '#06b6d4'; // Live Affairs Cyan
+      default: return '#38bdf8';
+    }
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#020617' }}>
       
@@ -118,7 +124,7 @@ function App() {
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
       </div>
 
-      {/* Search Matrix Input Layer Overlay with Autofill Dropdown */}
+      {/* Search Matrix Input Layer Overlay */}
       <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
         <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
@@ -206,27 +212,58 @@ function App() {
           ref={globeRef}
           width={dimensions.width}
           height={dimensions.height}
-          
-          // Pure, native high-performance assets mapping
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
           bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
           backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
           onGlobeClick={handleGlobeClick}
           
-          // PHASE 7 FIX: Utilizing direct component props for robust, crash-free atmospheric glow shading
           showAtmosphere={true}
           atmosphereColor="#0ea5e9"
           atmosphereAltitude={0.18}
           
-          // Render tracking rings on targeted coordinates
+          // PHASE 8: Dynamically recalculating target ring attributes via state dictionary shifts
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
-          ringColor={() => '#38bdf8'}
-          ringMaxRadius={7}
-          ringPropagationSpeed={3.5}
-          ringRepeatPeriod={650}
+          ringColor={() => getLayerColor()}
+          ringMaxRadius={selectedCoords ? 7 : 0}
+          ringPropagationSpeed={4}
+          ringRepeatPeriod={500}
         />
+      </div>
+
+      {/* PHASE 8: FLOATING ACADEMIC MATRIX CONTROL DOCK LAYER */}
+      <div style={{
+        position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
+        backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '30px', padding: '6px 12px',
+        display: 'flex', gap: '8px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', boxSizing: 'border-box'
+      }}>
+        {[
+          { id: 'history', label: 'History', color: '#eab308' },
+          { id: 'culture', label: 'Culture', color: '#10b981' },
+          { id: 'current', label: 'Current Affairs', color: '#06b6d4' }
+        ].map((layer) => (
+          <button
+            key={layer.id}
+            onClick={() => setActiveTab(layer.id)}
+            style={{
+              padding: '10px 20px', borderRadius: '20px', border: 'none',
+              backgroundColor: activeTab === layer.id ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: activeTab === layer.id ? layer.color : '#64748b',
+              fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+              fontFamily: 'system-ui, sans-serif', letterSpacing: '0.5px',
+              transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '8px'
+            }}
+          >
+            <div style={{ 
+              width: '6px', height: '6px', borderRadius: '50%', 
+              backgroundColor: layer.color,
+              boxShadow: activeTab === layer.id ? `0 0 10px ${layer.color}` : 'none'
+            }} />
+            {layer.label}
+          </button>
+        ))}
       </div>
 
       {/* Floating Dynamic Study Panel */}
@@ -250,7 +287,7 @@ function App() {
           ) : (
             <>
               <div>
-                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#38bdf8', fontWeight: '700', letterSpacing: '2px' }}>
+                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: getLayerColor(), fontWeight: '700', letterSpacing: '2px', transition: 'color 0.3s' }}>
                   {insights?.state}
                 </span>
                 <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '400', letterSpacing: '-0.5px' }}>
@@ -266,16 +303,16 @@ function App() {
                     onClick={() => setActiveTab(tab)}
                     style={{
                       background: 'none', border: 'none', 
-                      color: activeTab === tab ? '#38bdf8' : '#64748b',
+                      color: activeTab === tab ? getLayerColor() : '#64748b',
                       fontSize: '13px', fontWeight: '500', cursor: 'pointer',
-                      padding: '4px 8px', transition: 'color 0.2s ease',
+                      padding: '4px 8px', transition: 'color 0.3s ease',
                       textTransform: 'capitalize', letterSpacing: '0.5px',
                       position: 'relative'
                     }}
                   >
                     {tab === 'current' ? 'Current Affairs' : tab}
                     {activeTab === tab && (
-                      <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: '#38bdf8' }} />
+                      <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: getLayerColor(), transition: 'background-color 0.3s' }} />
                     )}
                   </button>
                 ))}
@@ -285,21 +322,21 @@ function App() {
               <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', paddingRight: '4px' }}>
                 {activeTab === 'history' && (
                   <div>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Historical Synopsis</h4>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#eab308', letterSpacing: '1px', textTransform: 'uppercase' }}>Historical Synopsis</h4>
                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1', fontWeight: '300' }}>{insights?.history}</p>
                   </div>
                 )}
 
                 {activeTab === 'culture' && (
                   <div>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Socio-Cultural Framework</h4>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#10b981', letterSpacing: '1px', textTransform: 'uppercase' }}>Socio-Cultural Framework</h4>
                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1', fontWeight: '300' }}>{insights?.culture}</p>
                   </div>
                 )}
 
                 {activeTab === 'current' && (
                   <div>
-                    <h4 style={{ margin: '0 0 15px 0', fontSize: '11px', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '11px', color: '#06b6d4', letterSpacing: '1px', textTransform: 'uppercase' }}>
                       Live Regional Briefings
                     </h4>
                     {insights?.currentAffairs ? (

@@ -12,6 +12,8 @@ Phase 3: Added the current affairs section and implemented using the NewsAPI.
 
 Phase 4: Added the search and Auto-navigation so that the user can type country name manually.
 
+Phase 5:Enabled Auto-fill functionality when the user searches (auto-fill & auto navigation functionality with the search functionality).
+
 Upcoming phases with exciting features and will be developed as soon as possible 
 
 ## Open to any kind of feedback and guidance :). 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Globe from 'react-globe.gl';
-import { fetchInsights, fetchCountryCoordinates } from './services/geoApi';
+import { fetchInsights, fetchCountryCoordinates, countryMatrixList } from './services/geoApi';
 
 function App() {
   const globeRef = useRef();
@@ -10,9 +10,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('history'); // Active state tracker for tabs
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
-  // New States for Search Phase
+  // Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  
+  // NEW: Suggestions Matrix State Layout
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -47,7 +51,42 @@ function App() {
     await processLocationExecution(lat, lng);
   };
 
-  // NEW: Search submission handler
+  // NEW: Real-time autofill matching query hook
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.trim().length > 1) {
+      const filtered = countryMatrixList
+        .filter(country => country.toLowerCase().startsWith(value.toLowerCase()))
+        .slice(0, 5); // Clean ceiling to display top 5 options only
+      setSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // NEW: Dropdown selection execution matrix
+  const handleSelectSuggestion = async (country) => {
+    setSearchQuery(country);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSearchLoading(true);
+
+    try {
+      const coords = await fetchCountryCoordinates(country);
+      setSelectedCoords(coords);
+      await processLocationExecution(coords.lat, coords.lng);
+      setSearchQuery(''); // Flush input query string
+    } catch (err) {
+      alert("Matrix location mismatch on selection route.");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -58,6 +97,8 @@ function App() {
       setSelectedCoords(coords); // Instantly drop point marker coordinates
       await processLocationExecution(coords.lat, coords.lng);
       setSearchQuery(''); // Clean input field upon successful fly-to execution
+      setSuggestions([]);
+      setShowSuggestions(false);
     } catch (err) {
       alert("Country location not found in matrix parameters. Keep to sovereign names!");
     } finally {
@@ -74,13 +115,15 @@ function App() {
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
       </div>
 
-      {/* NEW: Minimalist Search Matrix Input Layer Overlay */}
+      {/* UPDATED: Search Matrix Input Layer Overlay with Autofill Dropdown */}
       <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
         <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleInputChange}
+            onFocus={() => searchQuery.trim().length > 1 && setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Buffer ensures pointer select fires down securely
             placeholder="Type country (e.g. Chile, Japan, Egypt)..."
             disabled={searchLoading}
             style={{
@@ -118,6 +161,39 @@ function App() {
             )}
           </button>
         </form>
+
+        {/* NEW: Glassmorphic Dropdown Panel overlay matrix */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div style={{
+            position: 'absolute', top: '54px', left: '20px', right: '20px',
+            backgroundColor: 'rgba(8, 12, 24, 0.75)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
+            border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '16px',
+            overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', padding: '6px 0'
+          }}>
+            {suggestions.map((country, idx) => (
+              <div
+                key={idx}
+                onMouseDown={() => handleSelectSuggestion(country)}
+                style={{
+                  padding: '10px 22px', fontSize: '13px', color: '#cbd5e1',
+                  fontFamily: 'system-ui, sans-serif', cursor: 'pointer',
+                  transition: 'background-color 0.15s, color 0.15s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.12)';
+                  e.currentTarget.style.color = '#38bdf8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#cbd5e1';
+                }}
+              >
+                {country}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Simple global CSS injection for spinner asset keyframe */}
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>

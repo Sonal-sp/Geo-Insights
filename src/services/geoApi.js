@@ -4,8 +4,28 @@
  */
 const NEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY; 
 
-export async function fetchInsights(lat, lng) {
+// NEW: Search Lookup Matrix function to convert country strings into lat/lng coordinates
+export async function fetchCountryCoordinates(countryName) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?country=${encodeURIComponent(countryName)}&format=json&limit=1`
+    );
+    const data = await response.json();
+
+    if (!data || data.length === 0) {
+      throw new Error("Country matrix location not found");
+    }
+
+    return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+    };
+  } catch (error) {
+    console.error("Geocoding Failure:", error);
+    throw error;
+  }
 }
+
 export async function fetchInsights(lat, lng) {
   try {
     // 1. Reverse Geocoding to identify the nation

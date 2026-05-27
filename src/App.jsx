@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Globe from 'react-globe.gl';
-import { fetchInsights } from './services/geoApi';
+import { fetchInsights, fetchCountryCoordinates } from './services/geoApi';
 
 function App() {
   const globeRef = useRef();
@@ -9,6 +9,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('history'); // Active state tracker for tabs
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
+  
+  // New States for Search Phase
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -21,16 +25,44 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleGlobeClick = async ({ lat, lng }) => {
-    globeRef.current.controls().autoRotate = false;
-    setSelectedCoords({ lat, lng });
+  // Shared processing hub for handling data hydration and camera focus shifts
+  const processLocationExecution = async (lat, lng) => {
     setLoading(true);
     setInsights(null);
-    setActiveTab('history'); // Reset back to default tab upon fresh click
+    setActiveTab('history'); // Reset back to default tab
+
+    // Smoothly pan camera to coordinates over 2500ms at an altitude multiplier of 2.0
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = false;
+      globeRef.current.pointOfView({ lat, lng, altitude: 2.0 }, 2500);
+    }
 
     const data = await fetchInsights(lat, lng);
     setInsights(data);
     setLoading(false);
+  };
+
+  const handleGlobeClick = async ({ lat, lng }) => {
+    setSelectedCoords({ lat, lng });
+    await processLocationExecution(lat, lng);
+  };
+
+  // NEW: Search submission handler
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setSearchLoading(true);
+    try {
+      const coords = await fetchCountryCoordinates(searchQuery);
+      setSelectedCoords(coords); // Instantly drop point marker coordinates
+      await processLocationExecution(coords.lat, coords.lng);
+      setSearchQuery(''); // Clean input field upon successful fly-to execution
+    } catch (err) {
+      alert("Country location not found in matrix parameters. Keep to sovereign names!");
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   return (
@@ -40,6 +72,54 @@ function App() {
       <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 20, color: '#fff', fontFamily: 'system-ui, sans-serif', pointerEvents: 'none' }}>
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '400', letterSpacing: '3px' }}>GEO-INSIGHTS</h1>
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
+      </div>
+
+      {/* NEW: Minimalist Search Matrix Input Layer Overlay */}
+      <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
+        <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type country (e.g. Chile, Japan, Egypt)..."
+            disabled={searchLoading}
+            style={{
+              width: '100%',
+              padding: '13px 50px 13px 22px',
+              borderRadius: '30px',
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              color: '#fff',
+              fontSize: '13px',
+              fontFamily: 'system-ui, sans-serif',
+              outline: 'none',
+              boxSizing: 'border-box',
+              boxShadow: '0 20px 40px -15px rgba(0,0,0,0.5)',
+              transition: 'border-color 0.3s'
+            }}
+          />
+          <button
+            type="submit"
+            disabled={searchLoading}
+            style={{
+              position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '10px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            {searchLoading ? (
+              <div style={{ width: '16px', height: '16px', border: '2px solid #38bdf8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            )}
+          </button>
+        </form>
+        {/* Simple global CSS injection for spinner asset keyframe */}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
       {/* Main Globe Container */}
@@ -52,6 +132,15 @@ function App() {
           bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
           backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
           onGlobeClick={handleGlobeClick}
+          
+          // Render tracking rings on targeted coordinates
+          ringsData={selectedCoords ? [selectedCoords] : []}
+          ringLat={(d) => d.lat}
+          ringLng={(d) => d.lng}
+          ringColor={() => '#38bdf8'}
+          ringMaxRadius={6}
+          ringPropagationSpeed={3}
+          ringRepeatPeriod={800}
         />
       </div>
 
@@ -124,51 +213,51 @@ function App() {
                 )}
 
                 {activeTab === 'current' && (
-  <div>
-    <h4 style={{ margin: '0 0 15px 0', fontSize: '11px', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>
-      Live Regional Briefings
-    </h4>
-    {insights?.currentAffairs ? (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {insights.currentAffairs.map((art, idx) => (
-          <a 
-            key={idx} 
-            href={art.link} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ 
-              padding: '12px', 
-              backgroundColor: 'rgba(255,255,255,0.02)', 
-              borderRadius: '10px', 
-              border: '1px solid rgba(255,255,255,0.04)',
-              display: 'block',
-              textDecoration: 'none',
-              transition: 'transform 0.2s, background-color 0.2s',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '500', color: '#f1f5f9', lineHeight: '1.4' }}>
-              {art.title}
-            </h5>
-            <span style={{ fontSize: '10px', color: '#64748b' }}>Publisher: {art.source}</span>
-          </a>
-        ))}
-      </div>
-    ) : (
-      <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-        No live regional briefings discovered for this country timeline.
-      </p>
-    )}
-  </div>
-)}
+                  <div>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '11px', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      Live Regional Briefings
+                    </h4>
+                    {insights?.currentAffairs ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {insights.currentAffairs.map((art, idx) => (
+                          <a 
+                            key={idx} 
+                            href={art.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                              padding: '12px', 
+                              backgroundColor: 'rgba(255,255,255,0.02)', 
+                              borderRadius: '10px', 
+                              border: '1px solid rgba(255,255,255,0.04)',
+                              display: 'block',
+                              textDecoration: 'none',
+                              transition: 'transform 0.2s, background-color 0.2s',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                          >
+                            <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '500', color: '#f1f5f9', lineHeight: '1.4' }}>
+                              {art.title}
+                            </h5>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>Publisher: {art.source}</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                        No live regional briefings discovered for this country timeline.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}

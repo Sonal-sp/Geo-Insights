@@ -2,11 +2,15 @@
 
 ### CURRENTLY IN DEVELOPMENT PHASE 
 
+### Completed phases..
+
 Phase 1: used react-global.gl for a spinning earth UI at the beginning.
 
 Phase 2: implemented the logic of geo locations using wikipedia API in GeoAPI.js file.
 
 Phase 3: Added the current affairs section and implemented using the NewsAPI.
+
+Phase 4: Added the search and Auto-navigation so that the user can type country name manually.
 
 Upcoming phases with exciting features and will be developed as soon as possible 
 

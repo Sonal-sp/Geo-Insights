@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Globe from 'react-globe.gl';
-import { fetchInsights, fetchCountryCoordinates, countryMatrixList, fetchLiveGlobalEvents, verifyQuizClick } from './services/geoApi';
+import { fetchInsights, fetchCountryCoordinates, countryMatrixList, fetchLiveGlobalEvents, verifyQuizClick, checkBorderDisputes } from './services/geoApi';
 
 function App() {
   const globeRef = useRef();
@@ -16,16 +16,19 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Live Crisis Data Tracking States
+  // Live Crisis Tracking States
   const [liveEvents, setLiveEvents] = useState([]);
   const [activeCrisis, setActiveCrisis] = useState(null);
 
-  // PHASE 10: Interactive Quiz Engine State Matrix
+  // Quiz Engine State Matrix
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [targetCountry, setTargetCountry] = useState(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizFeedback, setQuizFeedback] = useState('');
   const [quizVerifying, setQuizVerifying] = useState(false);
+
+  // PHASE 11: Geopolitical Dispute Layer State Tracker
+  const [activeDispute, setActiveDispute] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -46,23 +49,21 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // PHASE 10: Quiz Generation Mechanics Loop
   const startNewQuizRound = () => {
-    // Select a completely random target country from our validated global index array
     const randomIndex = Math.floor(Math.random() * countryMatrixList.length);
     const selectedTarget = countryMatrixList[randomIndex];
-    
     setTargetCountry(selectedTarget);
     setQuizFeedback('Locate and click the target on the globe...');
     setInsights(null);
     setActiveCrisis(null);
+    setActiveDispute(null); // Clear disputes during quiz execution
     setSelectedCoords(null);
   };
 
   const toggleQuizMode = () => {
     if (!isQuizMode) {
       setIsQuizMode(true);
-      // Halt auto-rotate to allow manual canvas scanning workspace access
+      setActiveDispute(null);
       if (globeRef.current) globeRef.current.controls().autoRotate = false;
       startNewQuizRound();
     } else {
@@ -77,6 +78,20 @@ function App() {
     setLoading(true);
     setInsights(null);
     setActiveCrisis(null); 
+    
+    // PHASE 11: Intercept coordinates to verify if they match a disputed zone boundary
+    const disputeMatch = checkBorderDisputes(lat, lng);
+    if (disputeMatch) {
+      setActiveDispute(disputeMatch);
+      setLoading(false);
+      if (globeRef.current) {
+        globeRef.current.controls().autoRotate = false;
+        globeRef.current.pointOfView({ lat, lng, altitude: 1.8 }, 2000);
+      }
+      return; // Break out early to prevent standard sovereign api data overrides
+    }
+
+    setActiveDispute(null); // Reset dispute view if standard ground is targeted
     setActiveTab('history'); 
 
     if (globeRef.current) {
@@ -89,43 +104,34 @@ function App() {
     setLoading(false);
   };
 
-  // Main canvas interaction hub intercepting default behavior when Quiz Mode is active
   const handleGlobeClick = async ({ lat, lng }) => {
     if (isQuizMode) {
       if (quizVerifying || !targetCountry) return;
-      
       setQuizVerifying(true);
       setQuizFeedback('Verifying target alignment vectors...');
       setSelectedCoords({ lat, lng });
 
       const clickedCountry = await verifyQuizClick(lat, lng);
 
-      // Evaluate the spatial target verification matrix
       if (clickedCountry && clickedCountry.toLowerCase() === targetCountry.toLowerCase()) {
         setQuizScore(prev => ({ correct: prev.correct + 1, total: prev.total + 1 }));
         setQuizFeedback(`✓ EXCELLENT. Correctly identified ${targetCountry}!`);
-        setTimeout(() => {
-          setQuizVerifying(false);
-          startNewQuizRound();
-        }, 2000);
+        setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 2000);
       } else {
         setQuizScore(prev => ({ ...prev, total: prev.total + 1 }));
-        setQuizFeedback(`✕ INCORRECT. That was ${clickedCountry || "International Waters"}. Try a new country location!`);
-        setTimeout(() => {
-          setQuizVerifying(false);
-          startNewQuizRound();
-        }, 3000);
+        setQuizFeedback(`✕ INCORRECT. That was ${clickedCountry || "Contested waters"}. Try a new country location!`);
+        setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 3000);
       }
     } else {
-      // Return safely to standard study data hydration flow if gaming mode is idle
       setSelectedCoords({ lat, lng });
       await processLocationExecution(lat, lng);
     }
   };
 
   const handleCrisisPointClick = (eventPoint) => {
-    if (isQuizMode) return; // Freeze crisis triggers during dynamic test rounds
+    if (isQuizMode) return; 
     setInsights(null);
+    setActiveDispute(null);
     setSelectedCoords({ lat: eventPoint.lat, lng: eventPoint.lng });
     setActiveCrisis(eventPoint);
 
@@ -190,6 +196,7 @@ function App() {
   };
 
   const getLayerColor = () => {
+    if (activeDispute) return '#c084fc'; // Neon Dispute Magenta 
     switch (activeTab) {
       case 'history': return '#eab308'; 
       case 'culture': return '#10b981'; 
@@ -206,7 +213,6 @@ function App() {
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '400', letterSpacing: '3px' }}>GEO-INSIGHTS</h1>
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
         
-        {/* PHASE 10: QUIZ MODE CONTROL TOGGLE TRIGGER SWITCH */}
         <button
           onClick={toggleQuizMode}
           style={{
@@ -222,7 +228,7 @@ function App() {
         </button>
       </div>
 
-      {/* PHASE 10: INTERACTIVE QUIZ HEADS-UP CHALLENGE PROMPT LAYER */}
+      {/* Interactive Quiz Challenge Prompt Layer */}
       {isQuizMode && targetCountry && (
         <div style={{
           position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30,
@@ -234,8 +240,6 @@ function App() {
           <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase' }}>TARGET OBJECTIVE</span>
           <h2 style={{ margin: '6px 0 10px 0', color: '#eab308', fontSize: '26px', fontWeight: '400', letterSpacing: '1px' }}>{targetCountry}</h2>
           <p style={{ margin: 0, fontSize: '13px', color: quizFeedback.includes('✕') ? '#ef4444' : quizFeedback.includes('✓') ? '#10b981' : '#cbd5e1', fontWeight: '300' }}>{quizFeedback}</p>
-          
-          {/* Real-time score counter indicator */}
           <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
             <span>MATRIX PROFILE SCORE</span>
             <span style={{ color: '#38bdf8' }}>{quizScore.correct} / {quizScore.total} PASSED</span>
@@ -243,7 +247,7 @@ function App() {
         </div>
       )}
 
-      {/* Search Input Layer Overlay (Hidden automatically when testing metrics are live) */}
+      {/* Search Input Layer Overlay */}
       {!isQuizMode && (
         <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
           <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -279,7 +283,6 @@ function App() {
               ))}
             </div>
           )}
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 
@@ -301,12 +304,11 @@ function App() {
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
-          ringColor={() => isQuizMode ? (quizFeedback.includes('✕') ? '#ef4444' : '#10b981') : (activeCrisis ? '#ef4444' : getLayerColor())}
+          ringColor={() => getLayerColor()}
           ringMaxRadius={selectedCoords ? 8 : 0}
           ringPropagationSpeed={4}
           ringRepeatPeriod={400}
 
-          // Render live crisis points if quiz testing metrics are idle
           pointsData={isQuizMode ? [] : liveEvents}
           pointLat="lat"
           pointLng="lng"
@@ -319,7 +321,7 @@ function App() {
       </div>
 
       {/* Academic Matrix Control Dock Layer */}
-      {!activeCrisis && !isQuizMode && (
+      {!activeCrisis && !isQuizMode && !activeDispute && (
         <div style={{
           position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
           backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
@@ -340,7 +342,7 @@ function App() {
       )}
 
       {/* Floating Dynamic Study Panel */}
-      {!isQuizMode && (selectedCoords || activeCrisis) && (
+      {!isQuizMode && (selectedCoords || activeCrisis || activeDispute) && (
         <div style={{
           position: 'absolute', right: '30px', top: '30px', bottom: '30px', width: '400px',
           backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
@@ -351,6 +353,50 @@ function App() {
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
               <p style={{ color: '#38bdf8', fontSize: '13px', letterSpacing: '2px', fontWeight: '500' }}>ASSEMBLING GEO-MODULES...</p>
+            </div>
+          ) : activeDispute ? (
+            /* PHASE 11: GEOPOLITICAL DISPUTE SPECIAL BRIEFING VIEW WINDOW */
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div>
+                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#c084fc', fontWeight: '700', letterSpacing: '2px' }}>
+                  Contested Border Matrix
+                </span>
+                <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '400', letterSpacing: '-0.5px', color: '#c084fc' }}>
+                  {activeDispute.name}
+                </h2>
+                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '6px 0 0 0', lineHeight: '1.4' }}>
+                  <strong>Claimant Parties:</strong> {activeDispute.claimants}
+                </p>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px', paddingRight: '4px' }}>
+                <div style={{ padding: '14px', backgroundColor: 'rgba(192, 132, 252, 0.04)', borderRadius: '12px', border: '1px solid rgba(192, 132, 252, 0.12)' }}>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#c084fc', letterSpacing: '1px', textTransform: 'uppercase' }}>Strategic Analysis</h4>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>
+                    {activeDispute.strategicAnalysis}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>Treaties & Accord History</h4>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>
+                    {activeDispute.historicalTreaties}
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setActiveDispute(null)}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer',
+                  transition: 'background-color 0.2s', marginTop: '20px'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
+              >
+                Clear Dispute Overlay
+              </button>
             </div>
           ) : activeCrisis ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>

@@ -179,3 +179,45 @@ export async function verifyQuizClick(lat, lng) {
     return null;
   }
 }
+
+
+const DISPUTE_ZONES = [
+  {
+    id: "kashmir",
+    name: "Kashmir Territory",
+    claimants: "India vs. Pakistan (and third-party China)",
+    center: { lat: 34.5, lng: 76.0 },
+    radius: 3.5, // Degree tolerance geofence bounding box
+    historicalTreaties: "Instrument of Accession (1947), Simla Agreement (1972), Line of Control (LoC) demarcation definitions.",
+    strategicAnalysis: "Core geostrategic bottleneck controlling Indus River water resource access, trans-Karakoram transport routes, and critical high-altitude Himalayan mountain ridge borders."
+  },
+  {
+    id: "golan_heights",
+    name: "Golan Heights",
+    claimants: "Syria vs. Israel",
+    center: { lat: 33.0, lng: 35.8 },
+    radius: 1.2,
+    historicalTreaties: "UN Resolution 242, UN Resolution 497 (rejecting unilateral annexation), 1974 Disengagement Agreement.",
+    strategicAnalysis: "High-altitude plateau offering direct artillery observation over Damascus and the Jordan River Valley. Dominates crucial freshwater catchments feeding the Sea of Galilee."
+  },
+  {
+    id: "south_china_sea",
+    name: "Paracel & Spratly Islands (South China Sea)",
+    claimants: "China vs. Philippines, Vietnam, Malaysia, Brunei, Taiwan",
+    center: { lat: 10.5, lng: 114.0 },
+    radius: 6.0,
+    historicalTreaties: "UNCLOS (UN Convention on the Law of the Sea), 2016 Permanent Court of Arbitration ruling (Hague) rejecting the 'Nine-Dash Line'.",
+    strategicAnalysis: "Critical maritime trade corridor carrying over one-third of global shipping. Rich in untapped hydrocarbon reserves and essential deep-sea fishing grounds."
+  }
+];
+
+export function checkBorderDisputes(lat, lng) {
+  for (const zone of DISPUTE_ZONES) {
+    // Simple Euclidean distance calculation to verify if pointer falls inside the territorial boundary radius
+    const distance = Math.sqrt(Math.pow(lat - zone.center.lat, 2) + Math.pow(lng - zone.center.lng, 2));
+    if (distance <= zone.radius) {
+      return zone;
+    }
+  }
+  return null; // Return null safely if coordinates belong to normal sovereign landmasses
+}

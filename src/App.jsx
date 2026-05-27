@@ -21,14 +21,17 @@ function App() {
   const [activeCrisis, setActiveCrisis] = useState(null);
 
   // Quiz Engine State Matrix
-  const [isQuizMode, setIsQuizMode] = useState(false);
   const [targetCountry, setTargetCountry] = useState(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizFeedback, setQuizFeedback] = useState('');
   const [quizVerifying, setQuizVerifying] = useState(false);
 
-  // PHASE 11: Geopolitical Dispute Layer State Tracker
+  // Geopolitical Dispute Layer State Tracker
   const [activeDispute, setActiveDispute] = useState(null);
+
+  // NEW NAV BAR SYSTEM MATRIX: Manages the active screen mode globally
+  // Options: 'study' | 'crisis' | 'quiz'
+  const [appMode, setAppMode] = useState('study');
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -49,6 +52,27 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Mode Transition Controller
+  const handleModeChange = (mode) => {
+    setAppMode(mode);
+    
+    // Reset situational panel conditions during mode switches
+    setInsights(null);
+    setActiveCrisis(null);
+    setActiveDispute(null);
+    setSelectedCoords(null);
+    
+    if (mode === 'quiz') {
+      if (globeRef.current) globeRef.current.controls().autoRotate = false;
+      startNewQuizRound();
+    } else {
+      if (globeRef.current) globeRef.current.controls().autoRotate = true;
+      setTargetCountry(null);
+      setQuizFeedback('');
+    }
+  };
+
+  // Quiz Generation Mechanics Loop
   const startNewQuizRound = () => {
     const randomIndex = Math.floor(Math.random() * countryMatrixList.length);
     const selectedTarget = countryMatrixList[randomIndex];
@@ -56,22 +80,8 @@ function App() {
     setQuizFeedback('Locate and click the target on the globe...');
     setInsights(null);
     setActiveCrisis(null);
-    setActiveDispute(null); // Clear disputes during quiz execution
+    setActiveDispute(null);
     setSelectedCoords(null);
-  };
-
-  const toggleQuizMode = () => {
-    if (!isQuizMode) {
-      setIsQuizMode(true);
-      setActiveDispute(null);
-      if (globeRef.current) globeRef.current.controls().autoRotate = false;
-      startNewQuizRound();
-    } else {
-      setIsQuizMode(false);
-      setTargetCountry(null);
-      setQuizFeedback('');
-      if (globeRef.current) globeRef.current.controls().autoRotate = true;
-    }
   };
 
   const processLocationExecution = async (lat, lng) => {
@@ -79,7 +89,6 @@ function App() {
     setInsights(null);
     setActiveCrisis(null); 
     
-    // PHASE 11: Intercept coordinates to verify if they match a disputed zone boundary
     const disputeMatch = checkBorderDisputes(lat, lng);
     if (disputeMatch) {
       setActiveDispute(disputeMatch);
@@ -88,10 +97,10 @@ function App() {
         globeRef.current.controls().autoRotate = false;
         globeRef.current.pointOfView({ lat, lng, altitude: 1.8 }, 2000);
       }
-      return; // Break out early to prevent standard sovereign api data overrides
+      return;
     }
 
-    setActiveDispute(null); // Reset dispute view if standard ground is targeted
+    setActiveDispute(null); 
     setActiveTab('history'); 
 
     if (globeRef.current) {
@@ -105,7 +114,7 @@ function App() {
   };
 
   const handleGlobeClick = async ({ lat, lng }) => {
-    if (isQuizMode) {
+    if (appMode === 'quiz') {
       if (quizVerifying || !targetCountry) return;
       setQuizVerifying(true);
       setQuizFeedback('Verifying target alignment vectors...');
@@ -119,7 +128,7 @@ function App() {
         setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 2000);
       } else {
         setQuizScore(prev => ({ ...prev, total: prev.total + 1 }));
-        setQuizFeedback(`✕ INCORRECT. That was ${clickedCountry || "Contested waters"}. Try a new country location!`);
+        setQuizFeedback(`✕ INCORRECT. That was ${clickedCountry || "Contested Waters"}. Try again!`);
         setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 3000);
       }
     } else {
@@ -129,7 +138,7 @@ function App() {
   };
 
   const handleCrisisPointClick = (eventPoint) => {
-    if (isQuizMode) return; 
+    if (appMode !== 'crisis') return; // Ignore point interaction unless active monitoring is loaded
     setInsights(null);
     setActiveDispute(null);
     setSelectedCoords({ lat: eventPoint.lat, lng: eventPoint.lng });
@@ -158,7 +167,7 @@ function App() {
   };
 
   const handleSelectSuggestion = async (country) => {
-    if (isQuizMode) return;
+    if (appMode === 'quiz') return;
     setSearchQuery(country);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -178,7 +187,7 @@ function App() {
 
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim() || isQuizMode) return;
+    if (!searchQuery.trim() || appMode === 'quiz') return;
 
     setSearchLoading(true);
     try {
@@ -196,7 +205,7 @@ function App() {
   };
 
   const getLayerColor = () => {
-    if (activeDispute) return '#c084fc'; // Neon Dispute Magenta 
+    if (activeDispute) return '#c084fc'; 
     switch (activeTab) {
       case 'history': return '#eab308'; 
       case 'culture': return '#10b981'; 
@@ -213,23 +222,36 @@ function App() {
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '400', letterSpacing: '3px' }}>GEO-INSIGHTS</h1>
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
         
-        <button
-          onClick={toggleQuizMode}
-          style={{
-            marginTop: '20px', padding: '10px 18px', borderRadius: '20px',
-            border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer',
-            backgroundColor: isQuizMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.08)',
-            color: isQuizMode ? '#ef4444' : '#38bdf8', fontSize: '11px', fontWeight: '700',
-            letterSpacing: '1px', textTransform: 'uppercase', transition: 'all 0.2s',
-            pointerEvents: 'auto'
-          }}
-        >
-          {isQuizMode ? "Exit Quiz Module" : "Launch Retention Quiz"}
-        </button>
+        {/* NEW SYSTEM MODE MASTER DASHBOARD SELECTION SWITCH DOCK */}
+        <div style={{
+          marginTop: '24px', display: 'flex', gap: '6px', padding: '4px',
+          backgroundColor: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', pointerEvents: 'auto'
+        }}>
+          {[
+            { id: 'study', label: 'Study Matrix', color: '#38bdf8' },
+            { id: 'crisis', label: 'Crisis Monitor', color: '#f97316' },
+            { id: 'quiz', label: 'Retention Quiz', color: '#eab308' }
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => handleModeChange(mode.id)}
+              style={{
+                padding: '8px 14px', borderRadius: '12px', border: 'none',
+                backgroundColor: appMode === mode.id ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+                color: appMode === mode.id ? mode.color : '#64748b',
+                fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+                letterSpacing: '0.5px', transition: 'all 0.15s ease'
+              }}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Interactive Quiz Challenge Prompt Layer */}
-      {isQuizMode && targetCountry && (
+      {/* INTERACTIVE QUIZ MODE CHALLENGE PROMPT PANEL */}
+      {appMode === 'quiz' && targetCountry && (
         <div style={{
           position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30,
           width: '100%', maxWidth: '460px', padding: '18px 24px', boxSizing: 'border-box',
@@ -242,13 +264,13 @@ function App() {
           <p style={{ margin: 0, fontSize: '13px', color: quizFeedback.includes('✕') ? '#ef4444' : quizFeedback.includes('✓') ? '#10b981' : '#cbd5e1', fontWeight: '300' }}>{quizFeedback}</p>
           <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
             <span>MATRIX PROFILE SCORE</span>
-            <span style={{ color: '#38bdf8' }}>{quizScore.correct} / {quizScore.total} PASSED</span>
+            <span style={{ color: '#eab308' }}>{quizScore.correct} / {quizScore.total} PASSED</span>
           </div>
         </div>
       )}
 
-      {/* Search Input Layer Overlay */}
-      {!isQuizMode && (
+      {/* Search Input Layer Overlay (Hidden automatically during quiz rounds) */}
+      {appMode !== 'quiz' && (
         <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
           <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
@@ -257,7 +279,7 @@ function App() {
               onChange={handleInputChange}
               onFocus={() => searchQuery.trim().length > 1 && setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} 
-              placeholder="Type country (e.g. Chile, Japan, Egypt)..."
+              placeholder={appMode === 'crisis' ? "Search regions for active event logs..." : "Type country (e.g. Chile, Japan, Egypt)..."}
               disabled={searchLoading}
               style={{
                 width: '100%', padding: '13px 50px 13px 22px', borderRadius: '30px',
@@ -304,24 +326,25 @@ function App() {
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
-          ringColor={() => getLayerColor()}
+          ringColor={() => appMode === 'quiz' ? (quizFeedback.includes('✕') ? '#ef4444' : '#10b981') : (activeCrisis ? '#ef4444' : getLayerColor())}
           ringMaxRadius={selectedCoords ? 8 : 0}
           ringPropagationSpeed={4}
           ringRepeatPeriod={400}
 
-          pointsData={isQuizMode ? [] : liveEvents}
+          // DYNAMIC STATE ISOLATION: 3D point parameters only populated when Crisis Monitor screen is active
+          pointsData={appMode === 'crisis' ? liveEvents : []}
           pointLat="lat"
           pointLng="lng"
           pointColor={() => '#f97316'} 
           pointAltitude={(d) => Math.min(d.magnitude * 0.05, 0.4)} 
           pointRadius={0.25}
-          eventsData={isQuizMode ? [] : liveEvents}
+          eventsData={appMode === 'crisis' ? liveEvents : []}
           onPointClick={handleCrisisPointClick}
         />
       </div>
 
-      {/* Academic Matrix Control Dock Layer */}
-      {!activeCrisis && !isQuizMode && !activeDispute && (
+      {/* Dynamic Layer Dock: Only visible when inspecting standard sovereign territories */}
+      {!activeCrisis && appMode === 'study' && !activeDispute && (
         <div style={{
           position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
           backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
@@ -341,8 +364,8 @@ function App() {
         </div>
       )}
 
-      {/* Floating Dynamic Study Panel */}
-      {!isQuizMode && (selectedCoords || activeCrisis || activeDispute) && (
+      {/* Dynamic Side Data Briefing Workspace Panel Container */}
+      {appMode !== 'quiz' && (selectedCoords || activeCrisis || activeDispute) && (
         <div style={{
           position: 'absolute', right: '30px', top: '30px', bottom: '30px', width: '400px',
           backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
@@ -355,48 +378,23 @@ function App() {
               <p style={{ color: '#38bdf8', fontSize: '13px', letterSpacing: '2px', fontWeight: '500' }}>ASSEMBLING GEO-MODULES...</p>
             </div>
           ) : activeDispute ? (
-            /* PHASE 11: GEOPOLITICAL DISPUTE SPECIAL BRIEFING VIEW WINDOW */
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div>
-                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#c084fc', fontWeight: '700', letterSpacing: '2px' }}>
-                  Contested Border Matrix
-                </span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '400', letterSpacing: '-0.5px', color: '#c084fc' }}>
-                  {activeDispute.name}
-                </h2>
-                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '6px 0 0 0', lineHeight: '1.4' }}>
-                  <strong>Claimant Parties:</strong> {activeDispute.claimants}
-                </p>
+                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#c084fc', fontWeight: '700', letterSpacing: '2px' }}>Contested Border Matrix</span>
+                <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '400', letterSpacing: '-0.5px', color: '#c084fc' }}>{activeDispute.name}</h2>
+                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '6px 0 0 0', lineHeight: '1.4' }}><strong>Claimant Parties:</strong> {activeDispute.claimants}</p>
               </div>
-
               <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px', paddingRight: '4px' }}>
                 <div style={{ padding: '14px', backgroundColor: 'rgba(192, 132, 252, 0.04)', borderRadius: '12px', border: '1px solid rgba(192, 132, 252, 0.12)' }}>
                   <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#c084fc', letterSpacing: '1px', textTransform: 'uppercase' }}>Strategic Analysis</h4>
-                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>
-                    {activeDispute.strategicAnalysis}
-                  </p>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{activeDispute.strategicAnalysis}</p>
                 </div>
-
                 <div>
                   <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>Treaties & Accord History</h4>
-                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>
-                    {activeDispute.historicalTreaties}
-                  </p>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{activeDispute.historicalTreaties}</p>
                 </div>
               </div>
-
-              <button 
-                onClick={() => setActiveDispute(null)}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
-                  backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer',
-                  transition: 'background-color 0.2s', marginTop: '20px'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
-              >
-                Clear Dispute Overlay
-              </button>
+              <button onClick={() => setActiveDispute(null)} style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer', transition: 'background-color 0.2s', marginTop: '20px' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>Clear Dispute Overlay</button>
             </div>
           ) : activeCrisis ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>

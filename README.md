@@ -24,6 +24,9 @@ Phase 9:Added interactive Map Coordinates Quiz.
 
 Phase 10:Added the world disputes section(eg,kashmir dispute;a purple sonar wave will come on the globe when clicked near it).
 
+minor upgrade:binded all the features in buttons for cleaner UI.
+
+
 Upcoming phases with exciting features and will be developed as soon as possible 
 
 ## Open to any kind of feedback and guidance :). 

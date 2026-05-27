@@ -4,6 +4,8 @@
 
 ### Completed phases..
 
+### Sprint 1:
+
 Phase 1: used react-global.gl for a spinning earth UI at the beginning.
 
 Phase 2: implemented the logic of geo locations using wikipedia API in GeoAPI.js file.
@@ -11,6 +13,8 @@ Phase 2: implemented the logic of geo locations using wikipedia API in GeoAPI.js
 Phase 3: Added the current affairs section and implemented using the NewsAPI.
 
 Phase 4: Added the search and Auto-navigation so that the user can type country name manually.
+
+### Sprint 2:
 
 Phase 5:Enabled Auto-fill functionality when the user searches (auto-fill & auto navigation functionality with the search functionality).
 
@@ -20,11 +24,17 @@ Phase 7: Added a dropdown snackbar like component for history ,culture ,current 
 
 Phase 8:Added Real-time tracking of climate, seismic, and humanitarian alerts.
 
+### Sprint 3:
+
 Phase 9:Added interactive Map Coordinates Quiz.
 
 Phase 10:Added the world disputes section(eg,kashmir dispute;a purple sonar wave will come on the globe when clicked near it).
 
 minor upgrade:binded all the features in buttons for cleaner UI.
+
+### Sprint 4:
+
+Phase 11:Added the time machine and the policy sandbox feature,(basic features added).
 
 
 Upcoming phases with exciting features and will be developed as soon as possible 

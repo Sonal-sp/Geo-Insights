@@ -221,3 +221,67 @@ export function checkBorderDisputes(lat, lng) {
   }
   return null; // Return null safely if coordinates belong to normal sovereign landmasses
 }
+
+/**
+ * SPRINT 4 DATA ENGINES: Time Machine, Orbit Mechanics, and Policy Sim
+ */
+
+// 1. Live ISS Telemetry Pipeline
+export async function fetchISSTelemetry() {
+  try {
+    const response = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
+    if (!response.ok) throw new Error("ISS pipeline latency mismatch.");
+    const data = await response.json();
+    return {
+      lat: data.latitude,
+      lng: data.longitude,
+      altitude: Math.round(data.altitude),
+      velocity: Math.round(data.velocity)
+    };
+  } catch (error) {
+    console.error("Orbit Telemetry Intercept Failure:", error);
+    return null;
+  }
+}
+
+// 2. Historical Timeline Ledger Database
+export const historicalTimelineMatrix = {
+  1800: {
+    title: "Era of Industrialization & Global Empires",
+    globalBrief: "The Napoleonic Wars reshape Western Europe. The British East India Company expands aggressively across the Indian subcontinent, while Qing Dynasty China dominates East Asian trade parameters under strict isolation protocols.",
+  },
+  1914: {
+    title: "Outbreak of the First World War",
+    globalBrief: "Imperial rivalry reaches its boiling point. Secret alliances mobilize across the globe following the assassination of Archduke Franz Ferdinand. The Austro-Hungarian, Ottoman, German, and Russian empires prepare for total collapse.",
+  },
+  1945: {
+    title: "Dawn of the Nuclear Age & Cold War",
+    globalBrief: "World War II concludes, giving rise to a bipolar international order dominated by the United States and the Soviet Union. The United Nations is formed to arbitrate sovereign flashpoints as decolonization starts sweeping Africa and Asia.",
+  }
+};
+
+// 3. Diplomatic Choice Simulator Registry
+export const simulatorScenarios = [
+  {
+    id: "malacca_blockade",
+    title: "Strait of Malacca Transit Interdiction",
+    region: "Southeast Asia Maritime Chokepoint",
+    lat: 1.4, lng: 102.9,
+    briefing: "An unidentified naval presence has established a choke blockade across the Strait of Malacca, halting 35% of all maritime trade. Energy supply lines to East Asia are dropping into critical deficits. Civil unrest parameters are expanding.",
+    options: [
+      { text: "Deploy multilateral escort fleets to break the blockade via naval escort protocol.", outcome: "TRADE RESTORED. Tensions rise sharply between coalition partners. Regional militarization markers scale upward by 25%." },
+      { text: "Reroute shipping fleets through the Sunda Strait, absorbing immediate logistical cost flags.", outcome: "CONGESTION INDUCED. Global supply chain delays hit critical status. Maritime insurance premiums surge, triggering a localized inflation spike." }
+    ]
+  },
+  {
+    id: "suez_disruption",
+    title: "Suez Canal Maritime Lockdown",
+    region: "Middle East Logistics Core",
+    lat: 30.0, lng: 32.5,
+    briefing: "A sudden structural failure has grounded a mega-freighter inside the narrowest shipping channels of the Suez Canal. European supply logistics are entirely severed, stranding billions in daily trade value.",
+    options: [
+      { text: "Authorize urgent emergency dredging maneuvers alongside local terminal controllers.", outcome: "SUCCESS achieved over a 96-hour window. Canal infrastructure operations normalize, but backup clearance takes weeks." },
+      { text: "Order commercial assets to circumnavigate the Cape of Good Hope, bypassing Africa entirely.", outcome: "DELAYS INTENSIFIED. Shipping lines absorb a 10-day voyage penalty. Global fuel commodity metrics surge past baseline expectations." }
+    ]
+  }
+];

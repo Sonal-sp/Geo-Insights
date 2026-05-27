@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Globe from 'react-globe.gl';
-import { fetchInsights, fetchCountryCoordinates, countryMatrixList, fetchLiveGlobalEvents, verifyQuizClick, checkBorderDisputes } from './services/geoApi';
+import { 
+  fetchInsights, fetchCountryCoordinates, countryMatrixList, 
+  fetchLiveGlobalEvents, verifyQuizClick, checkBorderDisputes,
+  fetchISSTelemetry, historicalTimelineMatrix, simulatorScenarios
+} from './services/geoApi';
 
 function App() {
   const globeRef = useRef();
@@ -10,28 +14,26 @@ function App() {
   const [activeTab, setActiveTab] = useState('history'); 
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   
-  // Search & Suggestions States
+  // Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Live Crisis Tracking States
+  // Live Crisis & Geopolitical States
   const [liveEvents, setLiveEvents] = useState([]);
   const [activeCrisis, setActiveCrisis] = useState(null);
-
-  // Quiz Engine State Matrix
-  const [targetCountry, setTargetCountry] = useState(null);
-  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
-  const [quizFeedback, setQuizFeedback] = useState('');
-  const [quizVerifying, setQuizVerifying] = useState(false);
-
-  // Geopolitical Dispute Layer State Tracker
   const [activeDispute, setActiveDispute] = useState(null);
 
-  // NEW NAV BAR SYSTEM MATRIX: Manages the active screen mode globally
-  // Options: 'study' | 'crisis' | 'quiz'
+  // Global App Mode: 'study' | 'crisis' | 'timeMachine' | 'policySim'
   const [appMode, setAppMode] = useState('study');
+
+  // NEW FEATURES SPRINT 4 BINDING STATES
+  const [isTopographical, setIsTopographical] = useState(false); // Biome Map Texture Switcher
+  const [issPosition, setIssPosition] = useState(null);          // Live ISS Track Vector
+  const [currentTimeYear, setCurrentTimeYear] = useState(1800); // Time Machine Year Indexer
+  const [activeSim, setActiveSim] = useState(null);              // Active Policy Simulation Choice Model
+  const [simOutcome, setSimOutcome] = useState('');
 
   useEffect(() => {
     const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -43,45 +45,54 @@ function App() {
       globeRef.current.controls().enablePan = false; 
     }
 
-    const initializeCrisisTracker = async () => {
+    // Initialize Global Crisis Data
+    const initializeDataHub = async () => {
       const events = await fetchLiveGlobalEvents();
       setLiveEvents(events);
     };
-    initializeCrisisTracker();
+    initializeDataHub();
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Mode Transition Controller
-  const handleModeChange = (mode) => {
-    setAppMode(mode);
-    
-    // Reset situational panel conditions during mode switches
-    setInsights(null);
-    setActiveCrisis(null);
-    setActiveDispute(null);
-    setSelectedCoords(null);
-    
-    if (mode === 'quiz') {
-      if (globeRef.current) globeRef.current.controls().autoRotate = false;
-      startNewQuizRound();
+  // Real-time ISS Orbit Tracking Frame Handler (Polls telemetry every 4.5 seconds)
+  useEffect(() => {
+    let telemetryTimer;
+    if (appMode === 'crisis') {
+      const streamOrbit = async () => {
+        const coords = await fetchISSTelemetry();
+        if (coords) setIssPosition(coords);
+      };
+      streamOrbit();
+      telemetryTimer = setInterval(streamOrbit, 4500);
     } else {
-      if (globeRef.current) globeRef.current.controls().autoRotate = true;
-      setTargetCountry(null);
-      setQuizFeedback('');
+      setIssPosition(null);
     }
-  };
+    return () => clearInterval(telemetryTimer);
+  }, [appMode]);
 
-  // Quiz Generation Mechanics Loop
-  const startNewQuizRound = () => {
-    const randomIndex = Math.floor(Math.random() * countryMatrixList.length);
-    const selectedTarget = countryMatrixList[randomIndex];
-    setTargetCountry(selectedTarget);
-    setQuizFeedback('Locate and click the target on the globe...');
+  // Unified Mode Navigation Handler
+  const handleModeTransition = (mode) => {
+    setAppMode(mode);
     setInsights(null);
     setActiveCrisis(null);
     setActiveDispute(null);
     setSelectedCoords(null);
+    setActiveSim(null);
+    setSimOutcome('');
+
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = (mode !== 'policySim');
+    }
+
+    if (mode === 'policySim') {
+      // Load first scenario automatically to guide student choice matrixing
+      setActiveSim(simulatorScenarios[0]);
+      setSelectedCoords({ lat: simulatorScenarios[0].lat, lng: simulatorScenarios[0].lng });
+      if (globeRef.current) {
+        globeRef.current.pointOfView({ lat: simulatorScenarios[0].lat, lng: simulatorScenarios[0].lng, altitude: 1.8 }, 1500);
+      }
+    }
   };
 
   const processLocationExecution = async (lat, lng) => {
@@ -93,71 +104,39 @@ function App() {
     if (disputeMatch) {
       setActiveDispute(disputeMatch);
       setLoading(false);
-      if (globeRef.current) {
-        globeRef.current.controls().autoRotate = false;
-        globeRef.current.pointOfView({ lat, lng, altitude: 1.8 }, 2000);
-      }
+      if (globeRef.current) globeRef.current.pointOfView({ lat, lng, altitude: 1.8 }, 2000);
       return;
     }
 
     setActiveDispute(null); 
     setActiveTab('history'); 
 
-    if (globeRef.current) {
-      globeRef.current.controls().autoRotate = false;
-      globeRef.current.pointOfView({ lat, lng, altitude: 2.0 }, 2500);
-    }
-
+    if (globeRef.current) globeRef.current.pointOfView({ lat, lng, altitude: 2.0 }, 2500);
     const data = await fetchInsights(lat, lng);
     setInsights(data);
     setLoading(false);
   };
 
   const handleGlobeClick = async ({ lat, lng }) => {
-    if (appMode === 'quiz') {
-      if (quizVerifying || !targetCountry) return;
-      setQuizVerifying(true);
-      setQuizFeedback('Verifying target alignment vectors...');
-      setSelectedCoords({ lat, lng });
-
-      const clickedCountry = await verifyQuizClick(lat, lng);
-
-      if (clickedCountry && clickedCountry.toLowerCase() === targetCountry.toLowerCase()) {
-        setQuizScore(prev => ({ correct: prev.correct + 1, total: prev.total + 1 }));
-        setQuizFeedback(`✓ EXCELLENT. Correctly identified ${targetCountry}!`);
-        setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 2000);
-      } else {
-        setQuizScore(prev => ({ ...prev, total: prev.total + 1 }));
-        setQuizFeedback(`✕ INCORRECT. That was ${clickedCountry || "Contested Waters"}. Try again!`);
-        setTimeout(() => { setQuizVerifying(false); startNewQuizRound(); }, 3000);
-      }
-    } else {
-      setSelectedCoords({ lat, lng });
-      await processLocationExecution(lat, lng);
-    }
+    if (appMode === 'timeMachine' || appMode === 'policySim') return; // Freeze clicking features during simulations
+    setSelectedCoords({ lat, lng });
+    await processLocationExecution(lat, lng);
   };
 
   const handleCrisisPointClick = (eventPoint) => {
-    if (appMode !== 'crisis') return; // Ignore point interaction unless active monitoring is loaded
+    if (appMode !== 'crisis') return; 
     setInsights(null);
     setActiveDispute(null);
     setSelectedCoords({ lat: eventPoint.lat, lng: eventPoint.lng });
     setActiveCrisis(eventPoint);
-
-    if (globeRef.current) {
-      globeRef.current.controls().autoRotate = false;
-      globeRef.current.pointOfView({ lat: eventPoint.lat, lng: eventPoint.lng, altitude: 1.8 }, 2000);
-    }
+    if (globeRef.current) globeRef.current.pointOfView({ lat: eventPoint.lat, lng: eventPoint.lng, altitude: 1.8 }, 2000);
   };
 
   const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-
     if (value.trim().length > 1) {
-      const filtered = countryMatrixList
-        .filter(country => country.toLowerCase().startsWith(value.toLowerCase()))
-        .slice(0, 5); 
+      const filtered = countryMatrixList.filter(country => country.toLowerCase().startsWith(value.toLowerCase())).slice(0, 5); 
       setSuggestions(filtered);
       setShowSuggestions(true);
     } else {
@@ -167,19 +146,17 @@ function App() {
   };
 
   const handleSelectSuggestion = async (country) => {
-    if (appMode === 'quiz') return;
     setSearchQuery(country);
     setSuggestions([]);
     setShowSuggestions(false);
     setSearchLoading(true);
-
     try {
       const coords = await fetchCountryCoordinates(country);
       setSelectedCoords(coords);
       await processLocationExecution(coords.lat, coords.lng);
       setSearchQuery(''); 
     } catch (err) {
-      alert("Matrix location mismatch on selection route.");
+      alert("Matrix configuration failure.");
     } finally {
       setSearchLoading(false);
     }
@@ -187,8 +164,7 @@ function App() {
 
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim() || appMode === 'quiz') return;
-
+    if (!searchQuery.trim()) return;
     setSearchLoading(true);
     try {
       const coords = await fetchCountryCoordinates(searchQuery);
@@ -198,7 +174,7 @@ function App() {
       setSuggestions([]);
       setShowSuggestions(false);
     } catch (err) {
-      alert("Country location not found in matrix parameters. Keep to sovereign names!");
+      alert("Country tracking failed.");
     } finally {
       setSearchLoading(false);
     }
@@ -222,7 +198,7 @@ function App() {
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '400', letterSpacing: '3px' }}>GEO-INSIGHTS</h1>
         <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
         
-        {/* NEW SYSTEM MODE MASTER DASHBOARD SELECTION SWITCH DOCK */}
+        {/* FOUR-MODE MASTER SELECTION NAV BAR SWITCH */}
         <div style={{
           marginTop: '24px', display: 'flex', gap: '6px', padding: '4px',
           backgroundColor: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(10px)',
@@ -231,11 +207,12 @@ function App() {
           {[
             { id: 'study', label: 'Study Matrix', color: '#38bdf8' },
             { id: 'crisis', label: 'Crisis Monitor', color: '#f97316' },
-            { id: 'quiz', label: 'Retention Quiz', color: '#eab308' }
+            { id: 'timeMachine', label: 'Time Machine', color: '#eab308' },
+            { id: 'policySim', label: 'Policy Sandbox', color: '#a855f7' }
           ].map((mode) => (
             <button
               key={mode.id}
-              onClick={() => handleModeChange(mode.id)}
+              onClick={() => handleModeTransition(mode.id)}
               style={{
                 padding: '8px 14px', borderRadius: '12px', border: 'none',
                 backgroundColor: appMode === mode.id ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
@@ -248,29 +225,52 @@ function App() {
             </button>
           ))}
         </div>
+
+        {/* FEATURE 1: PHYSICAL TOPOGRAPHY BIOME MAP TOGGLE BUTTON */}
+        {appMode === 'study' && (
+          <button
+            onClick={() => setIsTopographical(!isTopographical)}
+            style={{
+              marginTop: '16px', padding: '8px 14px', borderRadius: '30px',
+              border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer',
+              backgroundColor: isTopographical ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
+              color: isTopographical ? '#10b981' : '#cbd5e1', fontSize: '11px', fontWeight: '600',
+              pointerEvents: 'auto', transition: 'all 0.2s'
+            }}
+          >
+            {isTopographical ? "✓ Physical Topography Biomes Active" : "⚙ Swap to Physical Biome Map Texture"}
+          </button>
+        )}
       </div>
 
-      {/* INTERACTIVE QUIZ MODE CHALLENGE PROMPT PANEL */}
-      {appMode === 'quiz' && targetCountry && (
+      {/* FEATURE 2: TIME MACHINE CHRONO GRID SELECTION BUTTONS */}
+      {appMode === 'timeMachine' && (
         <div style={{
           position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30,
-          width: '100%', maxWidth: '460px', padding: '18px 24px', boxSizing: 'border-box',
-          backgroundColor: 'rgba(8, 12, 24, 0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', textAlign: 'center',
-          color: '#fff', fontFamily: 'system-ui, sans-serif', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)'
+          backgroundColor: 'rgba(8, 12, 24, 0.6)', backdropFilter: 'blur(20px)', borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.08)', padding: '12px 24px', display: 'flex', gap: '12px',
+          boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)', alignItems: 'center'
         }}>
-          <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase' }}>TARGET OBJECTIVE</span>
-          <h2 style={{ margin: '6px 0 10px 0', color: '#eab308', fontSize: '26px', fontWeight: '400', letterSpacing: '1px' }}>{targetCountry}</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: quizFeedback.includes('✕') ? '#ef4444' : quizFeedback.includes('✓') ? '#10b981' : '#cbd5e1', fontWeight: '300' }}>{quizFeedback}</p>
-          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-            <span>MATRIX PROFILE SCORE</span>
-            <span style={{ color: '#eab308' }}>{quizScore.correct} / {quizScore.total} PASSED</span>
-          </div>
+          <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', letterSpacing: '1px', marginRight: '6px' }}>CHRONO TARGET:</span>
+          {[1800, 1914, 1945].map((year) => (
+            <button
+              key={year}
+              onClick={() => setCurrentTimeYear(year)}
+              style={{
+                padding: '8px 16px', borderRadius: '10px', border: 'none',
+                backgroundColor: currentTimeYear === year ? '#eab308' : 'rgba(255,255,255,0.02)',
+                color: currentTimeYear === year ? '#000' : '#cbd5e1',
+                fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s'
+              }}
+            >
+              {year}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Search Input Layer Overlay (Hidden automatically during quiz rounds) */}
-      {appMode !== 'quiz' && (
+      {/* Search Input Box (Hidden during timeline navigation and simulations) */}
+      {appMode !== 'timeMachine' && appMode !== 'policySim' && (
         <div style={{ position: 'absolute', top: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: '100%', maxWidth: '420px', padding: '0 20px', boxSizing: 'border-box' }}>
           <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
@@ -289,22 +289,7 @@ function App() {
                 boxShadow: '0 20px 40px -15px rgba(0,0,0,0.5)', transition: 'border-color 0.3s'
               }}
             />
-            <button type="submit" disabled={searchLoading} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {searchLoading ? ( <div style={{ width: '16px', height: '16px', border: '2px solid #38bdf8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              )}
-            </button>
           </form>
-
-          {showSuggestions && suggestions.length > 0 && (
-            <div style={{ position: 'absolute', top: '54px', left: '20px', right: '20px', backgroundColor: 'rgba(8, 12, 24, 0.75)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', padding: '6px 0' }}>
-              {suggestions.map((country, idx) => (
-                <div key={idx} onMouseDown={() => handleSelectSuggestion(country)} style={{ padding: '10px 22px', fontSize: '13px', color: '#cbd5e1', fontFamily: 'system-ui, sans-serif', cursor: 'pointer', transition: 'background-color 0.15s, color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.12)'; e.currentTarget.style.color = '#38bdf8'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#cbd5e1'; }}>{country}</div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -314,24 +299,25 @@ function App() {
           ref={globeRef}
           width={dimensions.width}
           height={dimensions.height}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+          
+          // FEATURE 1: Texture swapper changes maps from night lights to natural physical biomes dynamically
+          globeImageUrl={isTopographical ? "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg" : "//unpkg.com/three-globe/example/img/earth-night.jpg"}
           bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
           backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
           onGlobeClick={handleGlobeClick}
           
           showAtmosphere={true}
-          atmosphereColor="#0ea5e9"
+          atmosphereColor={appMode === 'policySim' ? '#a855f7' : '#0ea5e9'}
           atmosphereAltitude={0.18}
           
           ringsData={selectedCoords ? [selectedCoords] : []}
           ringLat={(d) => d.lat}
           ringLng={(d) => d.lng}
-          ringColor={() => appMode === 'quiz' ? (quizFeedback.includes('✕') ? '#ef4444' : '#10b981') : (activeCrisis ? '#ef4444' : getLayerColor())}
-          ringMaxRadius={selectedCoords ? 8 : 0}
+          ringColor={() => getLayerColor()}
+          ringMaxRadius={8}
           ringPropagationSpeed={4}
           ringRepeatPeriod={400}
 
-          // DYNAMIC STATE ISOLATION: 3D point parameters only populated when Crisis Monitor screen is active
           pointsData={appMode === 'crisis' ? liveEvents : []}
           pointLat="lat"
           pointLng="lng"
@@ -340,109 +326,142 @@ function App() {
           pointRadius={0.25}
           eventsData={appMode === 'crisis' ? liveEvents : []}
           onPointClick={handleCrisisPointClick}
+
+          // FEATURE 2: Renders a distinctive glowing asset node overhead to mark the live tracking track of the ISS
+          customLayerData={issPosition ? [issPosition] : []}
+          customThreeObject={(d) => new window.THREE.Mesh(
+            new window.THREE.SphereGeometry(0.35, 16, 16),
+            new window.THREE.MeshBasicMaterial({ color: '#22d3ee', wireframe: true })
+          )}
+          customThreeObjectAltitude={0.65} // Positions it clearly off the surface in low Earth orbit
         />
       </div>
 
-      {/* Dynamic Layer Dock: Only visible when inspecting standard sovereign territories */}
+      {/* Layer Tabs Dock Panel */}
       {!activeCrisis && appMode === 'study' && !activeDispute && (
         <div style={{
           position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
-          backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '30px', padding: '6px 12px',
-          display: 'flex', gap: '8px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', boxSizing: 'border-box'
+          backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '30px', padding: '6px 12px', display: 'flex', gap: '8px'
         }}>
-          {[
-            { id: 'history', label: 'History', color: '#eab308' },
-            { id: 'culture', label: 'Culture', color: '#10b981' },
-            { id: 'current', label: 'Current Affairs', color: '#06b6d4' }
-          ].map((layer) => (
-            <button key={layer.id} onClick={() => setActiveTab(layer.id)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === layer.id ? 'rgba(255, 255, 255, 0.08)' : 'transparent', color: activeTab === layer.id ? layer.color : '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'system-ui, sans-serif', letterSpacing: '0.5px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: layer.color, boxShadow: activeTab === layer.id ? `0 0 10px ${layer.color}` : 'none' }} />
-              {layer.label}
-            </button>
+          {['history', 'culture', 'current'].map((layer) => (
+            <button key={layer.id} onClick={() => setActiveTab(layer)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === layer ? 'rgba(255, 255, 255, 0.08)' : 'transparent', color: activeTab === layer ? '#38bdf8' : '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>{layer}</button>
           ))}
         </div>
       )}
 
-      {/* Dynamic Side Data Briefing Workspace Panel Container */}
-      {appMode !== 'quiz' && (selectedCoords || activeCrisis || activeDispute) && (
-        <div style={{
-          position: 'absolute', right: '30px', top: '30px', bottom: '30px', width: '400px',
-          backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', zIndex: 20,
-          padding: '30px', color: '#f8fafc', fontFamily: 'system-ui, sans-serif',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
-        }}>
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-              <p style={{ color: '#38bdf8', fontSize: '13px', letterSpacing: '2px', fontWeight: '500' }}>ASSEMBLING GEO-MODULES...</p>
+      {/* Floating Dynamic Data Briefing Workspace Panel Container */}
+      <div style={{
+        position: 'absolute', right: '30px', top: '30px', bottom: '30px', width: '400px',
+        backgroundColor: 'rgba(8, 12, 24, 0.45)', backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', zIndex: 20,
+        padding: '30px', color: '#f8fafc', fontFamily: 'system-ui, sans-serif',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)', display: (selectedCoords || activeCrisis || activeDispute || appMode === 'timeMachine' || appMode === 'policySim') ? 'flex' : 'none', flexDirection: 'column', boxSizing: 'border-box',
+      }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}><p style={{ color: '#38bdf8', fontSize: '13px', letterSpacing: '2px' }}>ASSEMBLING MODULES...</p></div>
+        ) : appMode === 'timeMachine' ? (
+          /* FEATURE 3: TIME MACHINE STUDY PANEL SUMMARY OVERLAY */
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#eab308', fontWeight: '700', letterSpacing: '2px' }}>Chrono Stream Active</span>
+            <h2 style={{ margin: '4px 0 16px 0', fontSize: '26px', fontWeight: '400', color: '#fff' }}>Year {currentTimeYear}</h2>
+            <div style={{ padding: '16px', backgroundColor: 'rgba(234, 179, 8, 0.03)', borderRadius: '12px', border: '1px solid rgba(234, 179, 8, 0.12)' }}>
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#eab308', letterSpacing: '1px' }}>GLOBAL CONTEXT OVERVIEW</h4>
+              <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{historicalTimelineMatrix[currentTimeYear].title}</p>
             </div>
-          ) : activeDispute ? (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div>
-                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#c084fc', fontWeight: '700', letterSpacing: '2px' }}>Contested Border Matrix</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '400', letterSpacing: '-0.5px', color: '#c084fc' }}>{activeDispute.name}</h2>
-                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '6px 0 0 0', lineHeight: '1.4' }}><strong>Claimant Parties:</strong> {activeDispute.claimants}</p>
-              </div>
-              <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px', paddingRight: '4px' }}>
-                <div style={{ padding: '14px', backgroundColor: 'rgba(192, 132, 252, 0.04)', borderRadius: '12px', border: '1px solid rgba(192, 132, 252, 0.12)' }}>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#c084fc', letterSpacing: '1px', textTransform: 'uppercase' }}>Strategic Analysis</h4>
-                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{activeDispute.strategicAnalysis}</p>
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>Treaties & Accord History</h4>
-                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{activeDispute.historicalTreaties}</p>
-                </div>
-              </div>
-              <button onClick={() => setActiveDispute(null)} style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer', transition: 'background-color 0.2s', marginTop: '20px' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>Clear Dispute Overlay</button>
-            </div>
-          ) : activeCrisis ? (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div>
-                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#ef4444', fontWeight: '700', letterSpacing: '2px' }}>{activeCrisis.type} Alert</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: '400', letterSpacing: '-0.5px', color: '#f97316' }}>Magnitude {activeCrisis.magnitude}</h2>
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: '4px 0 0 0' }}>{activeCrisis.place}</p>
-              </div>
-              <div style={{ flex: 1, marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#ef4444', letterSpacing: '1px', textTransform: 'uppercase' }}>Socio-Environmental Impact</h4>
-                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>Seismic activation detected on coordinates [{activeCrisis.lat.toFixed(2)}, {activeCrisis.lng.toFixed(2)}]. For civil services examinations, analyze the regional infrastructure resilience, disaster management act parameters, and structural tectonic plates involved.</p>
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>Timestamp Telemetry</h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1' }}>{activeCrisis.time}</p>
-                </div>
-              </div>
-              <button onClick={() => setActiveCrisis(null)} style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.02)', color: '#fff', fontSize: '13px', cursor: 'pointer', transition: 'background-color 0.2s', marginTop: 'auto' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>Return to Core Map Matrix</button>
-            </div>
-          ) : insights?.isOcean ? (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1, textAlign: 'center' }}>
-              <h3 style={{ color: '#38bdf8', margin: '0 0 10px 0' }}>International Waters</h3>
-              <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>You targeted maritime or non-sovereign global territories. Focus your crosshairs back onto landmasses for core exam syllabi.</p>
-            </div>
-          ) : (
-            <>
-              <div>
-                <span style={{ textTransform: 'uppercase', fontSize: '10px', color: getLayerColor(), fontWeight: '700', letterSpacing: '2px', transition: 'color 0.3s' }}>{insights?.state}</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '400', letterSpacing: '-0.5px' }}>{insights?.country}</h2>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '25px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '12px' }}>
-                {['history', 'culture', 'current'].map((tab) => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={{ background: 'none', border: 'none', color: activeTab === tab ? getLayerColor() : '#64748b', fontSize: '13px', fontWeight: '500', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.3s ease', textTransform: 'capitalize', letterSpacing: '0.5px', position: 'relative' }}>
-                    {tab === 'current' ? 'Current Affairs' : tab}
-                    {activeTab === tab && ( <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: getLayerColor(), transition: 'background-color 0.3s' }} /> )}
+            <p style={{ marginTop: '20px', fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1', fontWeight: '300' }}>{historicalTimelineMatrix[currentTimeYear].globalBrief}</p>
+          </div>
+        ) : appMode === 'policySim' && activeSim ? (
+          /* FEATURE 4: DIPLOMATIC CHOICE MATRIX INTERACTION BUTTONS LAYER */
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#a855f7', fontWeight: '700', letterSpacing: '2px' }}>IR Crisis Simulation</span>
+            <h2 style={{ margin: '4px 0 2px 0', fontSize: '22px', fontWeight: '400', color: '#fff' }}>{activeSim.title}</h2>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>LOCATION: {activeSim.region}</span>
+            
+            <p style={{ margin: '20px 0', fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{activeSim.briefing}</p>
+            
+            {!simOutcome ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
+                {activeSim.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSimOutcome(opt.outcome)}
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(168,85,247,0.2)',
+                      backgroundColor: 'rgba(168,85,247,0.04)', color: '#d8b4fe', fontSize: '12.5px', textAlign: 'left',
+                      cursor: 'pointer', transition: 'all 0.2s', lineHeight: '1.4'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(168,85,247,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(168,85,247,0.04)'}
+                  >
+                    {opt.text}
                   </button>
                 ))}
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', paddingRight: '4px' }}>
-                {activeTab === 'history' && ( <div><h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#eab308', letterSpacing: '1px', textTransform: 'uppercase' }}>Historical Synopsis</h4><p style={{ margin: 0, fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1', fontWeight: '300' }}>{insights?.history}</p></div> )}
-                {activeTab === 'culture' && ( <div><h4 style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#10b981', letterSpacing: '1px', textTransform: 'uppercase' }}>Socio-Cultural Framework</h4><p style={{ margin: 0, fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1', fontWeight: '300' }}>{insights?.culture}</p></div> )}
-                {activeTab === 'current' && ( <div><h4 style={{ margin: '0 0 15px 0', fontSize: '11px', color: '#06b6d4', letterSpacing: '1px', textTransform: 'uppercase' }}>Live Regional Briefings</h4>{insights?.currentAffairs ? ( <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>{insights.currentAffairs.map((art, idx) => ( <a key={idx} href={art.link} target="_blank" rel="noopener noreferrer" style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)', display: 'block', textDecoration: 'none', transition: 'transform 0.2s, background-color 0.2s', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.transform = 'translateY(0)'; }}><h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '500', color: '#f1f5f9', lineHeight: '1.4' }}>{art.title}</h5><span style={{ fontSize: '10px', color: '#64748b' }}>Publisher: {art.source}</span></a> ))}</div> ) : ( <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>No live regional briefings discovered for this country timeline.</p> )}</div> )}
+            ) : (
+              <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '16px', backgroundColor: 'rgba(34,197,94,0.03)', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#22c55e', letterSpacing: '1px' }}>SIMULATION PROJECTION SUMMARY</h4>
+                  <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1', fontWeight: '300' }}>{simOutcome}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSimOutcome('');
+                    const nextIndex = (simulatorScenarios.indexOf(activeSim) + 1) % simulatorScenarios.length;
+                    setActiveSim(simulatorScenarios[nextIndex]);
+                    setSelectedCoords({ lat: simulatorScenarios[nextIndex].lat, lng: simulatorScenarios[nextIndex].lng });
+                    if (globeRef.current) globeRef.current.pointOfView({ lat: simulatorScenarios[nextIndex].lat, lng: simulatorScenarios[nextIndex].lng, altitude: 1.8 }, 1200);
+                  }}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+                    backgroundColor: '#a855f7', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer'
+                  }}
+                >
+                  Load Alternative Crisis Scenario
+                </button>
               </div>
-            </>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        ) : activeDispute ? (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div>
+              <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#c084fc', fontWeight: '700', letterSpacing: '2px' }}>Contested Border Matrix</span>
+              <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '400', color: '#c084fc' }}>{activeDispute.name}</h2>
+              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '6px 0 0 0' }}><strong>Claimants:</strong> {activeDispute.claimants}</p>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ padding: '14px', backgroundColor: 'rgba(192, 132, 252, 0.04)', borderRadius: '12px', border: '1px solid rgba(192, 132, 252, 0.12)' }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#c084fc', letterSpacing: '1px' }}>Strategic Analysis</h4>
+                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: '#cbd5e1' }}>{activeDispute.strategicAnalysis}</p>
+              </div>
+              <p style={{ fontSize: '13.5px', color: '#cbd5e1', lineHeight: '1.6' }}>{activeDispute.historicalTreaties}</p>
+            </div>
+          </div>
+        ) : activeCrisis ? (
+          /* FEATURE 2 EXTRA: BRIEFING DISPLAYS SATELLITE DETAILS IN THE SIDEBAR IF RUNNING */
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <span style={{ textTransform: 'uppercase', fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>{activeCrisis.type} Alert</span>
+            <h2 style={{ margin: '4px 0 0 0', fontSize: '22px', color: '#f97316' }}>Magnitude {activeCrisis.magnitude}</h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8' }}>{activeCrisis.place}</p>
+            {issPosition && (
+              <div style={{ marginTop: '20px', padding: '12px', borderRadius: '12px', backgroundColor: 'rgba(34,211,238,0.03)', border: '1px solid rgba(34,211,238,0.12)', fontSize: '12px', color: '#cbd5e1' }}>
+                <span style={{ color: '#22d3ee', fontWeight: '700' }}>🛰️ ISS OVERHEAD PASS TELEMETRY:</span>
+                <div style={{ marginTop: '4px' }}>Altitude: {issPosition.altitude} km | Velocity: {issPosition.velocity} km/h</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Standard Sovereign Insights View */
+          <>
+            <div>
+              <span style={{ textTransform: 'uppercase', fontSize: '10px', color: getLayerColor(), fontWeight: '700', letterSpacing: '2px' }}>{insights?.state}</span>
+              <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '400' }}>{insights?.country}</h2>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', marginTop: '24px' }}>
+              <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#cbd5e1' }}>{insights ? insights[activeTab] : "Select coordinates on standard study ground grids..."}</p>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

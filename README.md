@@ -58,9 +58,7 @@ VITE_NEWS_API_KEY=your_key_here
 
 npm run dev
 
-```
-
-Open your browser and navigate to the local server URL (usually `http://localhost:5173`) to launch the workspace!
+### Open your browser and navigate to the local server URL (usually `http://localhost:5173`) to launch the workspace!
 
 ---
 

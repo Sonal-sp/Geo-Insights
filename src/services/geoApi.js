@@ -78,14 +78,25 @@ export async function fetchInsights(lat, lng) {
     }
 
     // Parse News Articles securely
-    let newsArticles = [];
-    if (newsRes.status === 'fulfilled' && newsRes.value && newsRes.value.items) {
-      newsArticles = newsRes.value.items.slice(0, 4).map(item => ({
-        title: item.title,
-        source: item.author || "Global Dispatch",
-        link: item.link
-      }));
+    // Parse News Articles securely (Robust Alignment Modification)
+let newsArticles = [];
+if (newsRes.status === 'fulfilled' && newsRes.value && Array.isArray(newsRes.value.items)) {
+  newsArticles = newsRes.value.items.slice(0, 4).map(item => {
+    // Extract name safely whether source is a string, a nested object, or absent
+    let extractedSource = "Global Dispatch";
+    if (item.source) {
+      extractedSource = typeof item.source === 'object' ? (item.source.name || extractedSource) : item.source;
+    } else if (item.author) {
+      extractedSource = item.author;
     }
+
+    return {
+      title: item.title || "Untitled Regional Update",
+      source: extractedSource,
+      link: item.link || "#"
+    };
+  });
+}
 
     return {
       country: country,

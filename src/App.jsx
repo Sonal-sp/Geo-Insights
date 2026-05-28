@@ -196,7 +196,7 @@ function App() {
       {/* Floating Header Dashboard */}
       <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 20, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '400', letterSpacing: '3px' }}>GEO-INSIGHTS</h1>
-        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Matrix</p>
+        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>Civil Services & Geography Study Made easy.</p>
         
         {/* FOUR-MODE MASTER SELECTION NAV BAR SWITCH */}
         <div style={{

@@ -41,23 +41,18 @@ Follow these simple terminal commands to clone the matrix parameters and run the
 
 ### 1. Clone the Repository
 git clone [https://github.com/Sonal-sp/Geo-insights.git](https://github.com/Sonal-sp/Geo-insights.git)
-cd geo-insights
 
-```
+cd geo-insights
 
 ### 2. Install Dependency Packages
 
 npm install
-
-```
 
 ### 3. Setup Environment Configuration (Optional)
 
 Create a `.env` file in your root folder if hooking up secure API key integrations:
 
 VITE_NEWS_API_KEY=your_key_here
-
-```
 
 ### 4. Boot Up the Local Development Server
 

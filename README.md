@@ -11,7 +11,7 @@ During my academics in school , I was very curious about history,georgraphy and 
 
 ---
 Live Demo 
-Click here for the demo: 
+Click here for the demo:https://geo-insights-beta.vercel.app/
 ---
 
 ## My Attempt 

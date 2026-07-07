@@ -10,6 +10,9 @@ Geo-Insights is designed as an advanced 3D visual command center for students an
 During my academics in school , I was very curious about history,georgraphy and all the current affairs.It always fascinated me and I also observed students preparing for Civil services exams with tons of books and professional references. 
 
 ---
+Live Demo 
+Click here for the demo: 
+---
 
 ## My Attempt 
 To make the study more interesting and productive for students studying & preparing for geography ,civil services ,& the social subjects fascinators like me.

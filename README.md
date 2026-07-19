@@ -1,7 +1,5 @@
 # Geo-Insights : An interactive globe with the information of the specific area/city or state 
 
-### CURRENTLY IN DEVELOPMENT PHASE 
-
 ## 💡 The Idea
 Geo-Insights is designed as an advanced 3D visual command center for students and civil services aspirants. Traditional maps are static, but this platform brings geography and international relations to life by mapping historical profiles, cultural frameworks, real-time global news, disaster alerts, and policy simulations directly onto an interactive 3D globe. It bridges the gap between spatial geography and competitive exam preparation.
 
@@ -10,7 +8,7 @@ Geo-Insights is designed as an advanced 3D visual command center for students an
 During my academics in school , I was very curious about history,georgraphy and all the current affairs.It always fascinated me and I also observed students preparing for Civil services exams with tons of books and professional references. 
 
 ---
-Live Demo 
+## Live Demo 
 Click here for the demo:https://geo-insights-beta.vercel.app/
 ---
 

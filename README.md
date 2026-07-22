@@ -1,113 +1,236 @@
-# Geo-Insights : An interactive globe with the information of the specific area/city or state 
+# 🌍 Geo-Insights
 
-## 💡 The Idea
-Geo-Insights is designed as an advanced 3D visual command center for students and civil services aspirants. Traditional maps are static, but this platform brings geography and international relations to life by mapping historical profiles, cultural frameworks, real-time global news, disaster alerts, and policy simulations directly onto an interactive 3D globe. It bridges the gap between spatial geography and competitive exam preparation.
+An interactive 3D globe that transforms geography into an immersive learning experience by combining historical information, culture, current affairs, disaster monitoring, and geopolitical simulations—all in one platform.
 
----
-## My Inpsiration
-During my academics in school , I was very curious about history,georgraphy and all the current affairs.It always fascinated me and I also observed students preparing for Civil services exams with tons of books and professional references. 
+Built primarily for students, geography enthusiasts, and civil services aspirants, Geo-Insights makes studying the world more engaging through interactive visualization and real-time data.
 
 ---
-## Live Demo 
-Click here for the demo:https://geo-insights-beta.vercel.app/
+
+## 💡 Inspiration
+
+Geography, history, and current affairs have always fascinated me throughout my school years. While preparing for competitive exams, students often rely on multiple books, atlases, and news sources to connect geographical locations with historical and political events.
+
+I wanted to build something that brings all of this information together on a single interactive globe, making learning more visual, engaging, and intuitive.
+
 ---
 
-## My Attempt 
-To make the study more interesting and productive for students studying & preparing for geography ,civil services ,& the social subjects fascinators like me.
+## 🌐 Live Demo
+
+**Try it here:**
+https://geo-insights-beta.vercel.app/
 
 ---
 
 ## 🚀 Features
-* **Dynamic Search & Fly-To Matrix:** Type any country with smart auto-fill suggestions and watch the globe camera smoothly glide directly to its center point.
-* **Color-Coded Sonar Insights:** Instantly extract localized modular history summaries (Yellow), cultural legacy profiles (Green), and current affairs (Blue) backed by custom map markers.
-* **Live Crisis Telemetry Tracker:** Renders real-time significant global hazard points (like earthquakes) as 3D altitude pillars rising from tectonic lines.
-* **Interactive Active Recall Quiz:** Test location memory and geography skills against random country prompts with real-time scoreboard metrics.
-* **Geofenced Dispute Overlay:** Drops specialized purple sonar alerts over contested borders (like Kashmir) to review claimant status and historic treaties.
-* **Texture Synthesis Deck:** Instantly swap map visuals between satellite nighttime lights and physical topography biomes.
-* **LEO Orbit Mechanic Tracking:** Automatically polls and tracks the real-time orbital path coordinates of the International Space Station (ISS).
-* **Policy Choice Sandbox Simulator:** Play through interactive foreign policy scenarios at maritime trade chokepoints and project diplomatic outcomes in real time.
+
+### 🌎 Interactive 3D Globe
+
+* Explore the world through a fully interactive 3D globe powered by WebGL.
+* Smooth camera controls for seamless navigation.
+
+### 🔍 Smart Country Search
+
+* Search any country with autocomplete suggestions.
+* Automatically fly the globe to the selected location.
+
+### 📚 Country Insights
+
+Retrieve information for any country including:
+
+* History
+* Culture
+* Current Affairs
+
+Each category is displayed using distinct color-coded markers for better visualization.
+
+### 🚨 Live Disaster Monitoring
+
+Track real-time global events such as:
+
+* Earthquakes
+* Seismic activities
+* Other live geological alerts
+
+using live USGS data.
+
+### 🛰️ ISS Live Tracker
+
+Watch the International Space Station's live orbital position as it moves around Earth.
+
+### 🗺️ Territorial Disputes
+
+Visualize disputed regions such as Kashmir and access concise geopolitical summaries explaining the competing claims and historical background.
+
+### 🎮 Geography Quiz
+
+Challenge yourself with an interactive quiz that tests your knowledge of country locations while maintaining a live score.
+
+### 🌍 Globe Texture Switcher
+
+Switch between different globe textures including:
+
+* Satellite View
+* Physical Topography
+
+for enhanced geographical understanding.
+
+### 🕰️ Time Machine
+
+Explore selected historical periods and understand how geopolitical landscapes evolved over time.
+
+### 🏛️ Policy Sandbox
+
+Experiment with simplified diplomatic and geopolitical scenarios to understand how different policy decisions may influence international relations.
 
 ---
 
 ## 🛠️ Tech Stack
-* **Frontend Library:** React.js (Hooks, Context, Refs architecture)
-* **Build System:** Vite (Fast, optimized development environment)
-* **3D Globe Canvas:** `react-globe.gl` (Three.js and WebGL powered rendering engine)
-* **API Frameworks:** OpenStreetMap Nominatim, Wikipedia Rest API, Google News RSS, USGS Live GeoJSON, Satellite Telemetry Streams
+
+| Category            | Technologies                    |
+| ------------------- | ------------------------------- |
+| Frontend            | React.js                        |
+| Build Tool          | Vite                            |
+| 3D Rendering        | react-globe.gl, Three.js, WebGL |
+| Styling             | CSS                             |
+| Maps & Geocoding    | OpenStreetMap Nominatim         |
+| Historical Data     | Wikipedia REST API              |
+| Current Affairs     | Google News RSS                 |
+| Disaster Monitoring | USGS Live GeoJSON               |
+| Space Tracking      | ISS Telemetry APIs              |
 
 ---
 
-## 💻 How To Run & Implement Globally
-Follow these simple terminal commands to clone the matrix parameters and run the codebase on your local machine:
+## 🚀 Getting Started
 
-### 1. Clone the Repository
-git clone [https://github.com/Sonal-sp/Geo-insights.git](https://github.com/Sonal-sp/Geo-insights.git)
+### Clone the Repository
 
-cd geo-insights
+```bash
+git clone https://github.com/Sonal-sp/Geo-insights.git
+cd Geo-insights
+```
 
-### 2. Install Dependency Packages
+### Install Dependencies
 
+```bash
 npm install
+```
 
-### 3. Setup Environment Configuration (Optional)
+### Configure Environment Variables (Optional)
 
-Create a `.env` file in your root folder if hooking up secure API key integrations:
+Create a `.env` file in the project root if using API keys.
 
-VITE_NEWS_API_KEY=your_key_here
+```env
+VITE_NEWS_API_KEY=your_api_key
+```
 
-### 4. Boot Up the Local Development Server
+### Start the Development Server
 
+```bash
 npm run dev
+```
 
-### Open your browser and navigate to the local server URL (usually `http://localhost:5173`) to launch the workspace!
+Open your browser and visit:
+
+```
+http://localhost:5173
+```
 
 ---
 
 ## 🎯 Use Cases
 
-* **Civil Services Preparation:** Rapidly cross-reference geopolitical flashpoints, international border treaties, and modern regional affairs data.
-* **Interactive Academic Classrooms:** Dynamic visual learning tool for teachers and students studying tectonic plates, weather patterns, and global trade corridors.
-* **Geopolitical Risk Analysis:** Sandbox testing platform to simulate economic and diplomatic outcomes regarding strategic chokepoint blockades.
+### 📖 Civil Services Preparation
+
+* Geography
+* International Relations
+* Current Affairs
+* Border disputes
+* World history
+
+### 🏫 Classroom Learning
+
+An engaging visual learning tool for schools and colleges teaching:
+
+* Geography
+* Environmental Science
+* History
+* Global Politics
+
+### 🌍 Geography Enthusiasts
+
+Explore countries, cultures, historical events, and real-time global developments through an interactive interface.
+
+### 📊 Geopolitical Awareness
+
+Understand strategic maritime routes, territorial disputes, and international policy scenarios using visual simulations.
 
 ---
 
-## Completed phases..
+# 🚀 Development Progress
 
-### Sprint 1:
+## Sprint 1
 
-* Phase 1: used react-globe.gl for a spinning earth UI at the beginning.
-* Phase 2: implemented the logic of geo locations using wikipedia API in GeoAPI.js file.
-* Phase 3: Added the current affairs section and implemented using the NewsAPI.
-* Phase 4: Added the search and Auto-navigation so that the user can type country name manually.
+* Interactive spinning 3D globe
+* Country information using Wikipedia API
+* Current Affairs integration
+* Country search with automatic navigation
 
-### Sprint 2:
+---
 
-* Phase 5: Enabled Auto-fill functionality when the user searches (auto-fill & auto navigation functionality with the search functionality).
-* Phase 6: Added some UI/UX: kept a blue glow effect around the globe for more galaxy effect to make study interesting.
-* Phase 7: Added a dropdown snackbar like component for history, culture, current affairs with colors like yellow, green & blue respectively along with sonar marking on the globe with respective colors.
-* Phase 8: Added Real-time tracking of climate, seismic, and humanitarian alerts using live USGS data streams.
+## Sprint 2
 
-### Sprint 3:
+* Search autocomplete
+* Improved UI with animated glow effects
+* Color-coded History, Culture, and Current Affairs panels
+* Live disaster monitoring using USGS feeds
 
-* Phase 9: Added interactive Map Coordinates Quiz module to test location retention with live score tracking.
-* Phase 10: Added the world disputes section (e.g., Kashmir dispute; a purple sonar wave will come on the globe when clicked near it and unlock territorial briefings).
-* Minor Upgrade: binded all the features in buttons for cleaner UI.
+---
 
-### Sprint 4:
+## Sprint 3
 
-* Phase 11: Added the time machine and the policy sandbox feature (basic features added).
+* Interactive Geography Quiz
+* Territorial dispute visualization
+* Cleaner dashboard navigation
 
-### Sprint 5 (The Command Dashboard Integration):
+---
 
-* Phase 12: Expanded the navigation dock to switch between 4 specialized system modes (Study Matrix, Crisis Monitor, Time Machine, Policy Sandbox).
-* Phase 13: Added a Physical Topography Biome Map switcher button under Study Mode to dynamically swap globe surface textures.
-* Phase 14: Integrated a Space Tracking Module under Crisis Mode to track and display live International Space Station (ISS) orbit telemetry over the 3D globe.
-* Phase 15: Upgraded the Time Machine Mode with functional historic timeline buttons (1800, 1914, 1945) and the Policy Sandbox Mode with clickable interactive diplomatic scenario choices.
+## Sprint 4
 
-Upcoming phases with exciting features and will be developed as soon as possible
+* Initial Time Machine implementation
+* Policy Sandbox foundation
 
-## Open to any kind of feedback and guidance :).
+---
 
-```
+## Sprint 5
 
-```
+### Command Dashboard
+
+Introduced four dedicated system modes:
+
+* Study Matrix
+* Crisis Monitor
+* Time Machine
+* Policy Sandbox
+
+Additional improvements include:
+
+* Physical Topography globe textures
+* Live ISS tracker
+* Interactive historical timelines
+* Diplomacy simulation scenarios
+
+---
+
+
+## 👨‍💻 Purpose
+
+Geo-Insights was built to demonstrate how modern web technologies can make geography and international affairs more interactive and engaging. The project combines 3D visualization, live data streams, educational content, and simulation-based learning into a single platform that encourages exploration rather than memorization.
+
+---
+
+## 💬 Feedback
+
+Suggestions, ideas, and contributions are always welcome. If you have feature requests, find bugs, or have ideas to improve the platform, feel free to open an issue or submit a pull request.
+
+---
+
